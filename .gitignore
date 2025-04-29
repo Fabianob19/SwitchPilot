@@ -1,0 +1,23 @@
+# Ignorar ambientes virtuais
+.venv/
+env/
+venv/
+
+# Ignorar arquivos de build do PyInstaller
+build/
+dist/
+*.spec
+
+# Ignorar arquivos grandes e binários
+*.exe
+*.pkg
+*.pyd
+*.dll
+*.so
+*.zip
+*.tar.gz
+*.log
+
+# Ignorar arquivos temporários do sistema
+*.pyc
+__pycache__/ 
