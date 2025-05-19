@@ -1,0 +1,37 @@
+{
+  "referencias": [
+    {
+      "path": "fora_do_ar.png",
+      "acoes": [
+        {
+          "tipo": "overlay",
+          "parametros": {
+            "overlay": "3"
+          }
+        }
+      ]
+    },
+    {
+      "path": "F:/chat/referencia_4.png",
+      "acoes": [
+        {
+          "tipo": "shortcut",
+          "parametros": {
+            "nome": "dfdg"
+          }
+        }
+      ]
+    },
+    {
+      "path": "referencia_7.png",
+      "acoes": [
+        {
+          "tipo": "cut",
+          "parametros": {
+            "entrada": ""
+          }
+        }
+      ]
+    }
+  ]
+}

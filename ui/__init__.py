@@ -1,0 +1,3 @@
+"""
+Pacote UI do SwitchPilot
+"""

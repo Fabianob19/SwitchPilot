@@ -1,0 +1,577 @@
+/* switchpilot/ui/themes/modern_very_dark.qss */
+
+/* Paleta de Cores - Tema Muito Escuro
+    Fundo Principal: #1e1e1e
+    Fundo Painéis/Docks: #252526
+    Bordas Sutis: #333333
+    Texto Principal: #cccccc
+    Texto Secundário: #858585
+    Destaque Principal (Botões, Seleção): #007acc (Azul VS Code)
+    Destaque Ativo/Hover: #0099e6 
+    Inputs Fundo: #2a2a2a
+*/
+
+/* Estilos Globais */
+QWidget {
+    background-color: #1e1e1e;
+    color: #cccccc;
+    font-family: "Segoe UI";
+    font-size: 10pt;
+}
+
+QMainWindow {
+    background-color: #1e1e1e;
+}
+
+/* QDockWidget - Painéis */
+QDockWidget {
+    titlebar-close-icon: none; 
+    titlebar-normal-icon: none; 
+}
+
+QDockWidget::title { /* Esta regra deve aplicar-se às abas dos docks */
+    background-color: #2d2d2d; /* Fundo escuro para as abas/títulos de dock (não selecionado) */
+    color: #cccccc;           /* Texto claro */
+    padding: 7px 12px;       /* Ajustar padding se necessário */
+    border: 1px solid #333333;
+    border-bottom: none;       /* Importante para abas se fundirem com a borda superior do conteúdo */
+    /* border-top-left-radius: 4px; */ /* Opcional para cantos arredondados */
+    /* border-top-right-radius: 4px; */
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+QDockWidget::title:selected { 
+    background-color: #1e1e1e; 
+    color: #0099e6;          
+}
+
+QDockWidget::title:hover:!selected { 
+    background-color: #3f3f3f;
+}
+
+QDockWidget > QWidget { /* Conteúdo dentro do DockWidget */
+    background-color: #252526; /* Fundo do conteúdo do dock */
+    border: 1px solid #333333;
+    border-top: none; 
+}
+
+/* QGroupBox */
+QGroupBox {
+    background-color: #252526;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    margin-top: 18px; 
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 2px 8px;
+    background-color: #2a2a2a; /* Um pouco diferente para o título do groupbox */
+    color: #cccccc;
+    border: 1px solid #333333;
+    border-bottom: none;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    font-weight: bold;
+}
+
+/* Botões */
+QPushButton {
+    background-color: #282828; /* Mais escuro */
+    color: #cccccc;
+    border: 1px solid #007acc; /* Borda com cor de destaque */
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 10pt;
+}
+
+QPushButton:hover {
+    background-color: #333333; /* Antiga cor base, agora para hover */
+    border: 1px solid #0099e6; /* Borda mais clara no hover */
+}
+
+QPushButton:pressed {
+    background-color: #007acc; /* Fundo com cor de destaque ao pressionar */
+    color: white; /* Texto branco para contraste no botão pressionado */
+}
+
+QPushButton:disabled {
+    background-color: #2a2a2a;
+    color: #858585;
+    border-color: #333333;
+}
+
+/* Campos de Texto */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #2a2a2a !important; /* Fundo dos inputs - REFORÇADO com !important */
+    color: #cccccc;
+    border: 1px solid #333333;
+    border-radius: 3px;
+    padding: 6px;
+    font-size: 10pt;
+    selection-background-color: #007acc; /* Cor de fundo da seleção */
+    selection-color: #ffffff;           /* Cor do texto selecionado */
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #007acc; /* Destaque azul no foco */
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: #2a2a2a;
+    color: #cccccc;
+    border: 1px solid #333333;
+    border-radius: 3px;
+    padding: 6px;
+    min-width: 6em;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 1px;
+    border-left-color: #333333;
+    border-left-style: solid;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox::down-arrow {
+    image: none; 
+}
+
+QComboBox QAbstractItemView { /* Estilo da lista dropdown */
+    background-color: #252526;
+    border: 1px solid #333333;
+    selection-background-color: #007acc;
+    color: #cccccc;
+    padding: 4px;
+}
+
+/* Estilos para QListWidget e seus itens (e por herança QListView) */
+QListWidget, QListView {
+    background-color: #252526; /* Fundo da área da lista */
+    color: #cccccc; /* Cor do texto padrão para os itens */
+    border: 1px solid #333333;
+    border-radius: 3px;
+    padding: 2px; /* Pequeno padding interno */
+    alternate-background-color: #2a2a2a; /* Cor para linhas alternadas, um pouco diferente do fundo */
+    show-decoration-selected: 1; /* Para QListView, garante que a seleção ocupe a linha toda */
+}
+
+QListWidget::item, QListView::item {
+    background-color: transparent; /* Fundo do item transparente para mostrar o fundo da lista ou alternate-background-color */
+    color: #cccccc;
+    padding: 5px 8px; /* Padding para cada item */
+    border-bottom: 1px solid #2e2e2e; /* Linha sutil separadora entre itens */
+    margin: 0px; /* Sem margens externas */
+}
+
+QListWidget::item:last-child, QListView::item:last-child {
+    border-bottom: none; /* Remover borda do último item */
+}
+
+QListWidget::item:hover, QListView::item:hover {
+    background-color: #383838; /* Fundo no hover */
+    color: #ffffff;
+}
+
+QListWidget::item:selected, QListView::item:selected {
+    background-color: #007acc; /* Fundo do item selecionado (azul VS Code) */
+    color: #ffffff; /* Texto branco para item selecionado */
+    border-left: 3px solid #0099e6; /* Uma borda lateral para destacar mais a seleção */
+    padding-left: 5px; /* Ajustar padding por causa da borda */
+}
+
+QListWidget::item:selected:active, QListView::item:selected:active {
+    background-color: #007acc; /* Mesma cor se ativo */
+}
+
+QListWidget::item:selected:!active, QListView::item:selected:!active {
+    background-color: #005c9d; /* Cor ligeiramente diferente se a lista não está em foco mas o item está selecionado */
+    color: #dddddd;
+}
+
+/* CheckBox e RadioButton */
+QCheckBox, QRadioButton {
+    spacing: 5px;
+    color: #cccccc;
+    font-size: 10pt;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    border: 1px solid #333333;
+    background-color: #1e1e1e;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border: 1px solid #007acc;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #007acc;
+    border: 1px solid #0099e6;
+}
+
+QCheckBox::indicator:checked::after {
+}
+
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    border-color: #2a2a2a;
+    background-color: #252526;
+}
+
+/* Labels */
+QLabel {
+    color: #cccccc;
+    background-color: transparent; 
+    font-size: 10pt;
+}
+
+QLabel[heading="true"] { 
+    font-size: 11pt;
+    font-weight: bold;
+    color: #0099e6; /* Azul claro para títulos de seção */
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* Sliders - Ajustar para tema muito escuro */
+QSlider::groove:horizontal {
+    border: 1px solid #333333;
+    background: #2a2a2a;
+    height: 8px;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: #007acc;
+    border: 1px solid #0099e6;
+    width: 18px;
+    margin: -5px 0; 
+    border-radius: 9px;
+}
+
+QSlider::groove:vertical {
+    border: 1px solid #333333;
+    background: #2a2a2a;
+    width: 8px;
+    border-radius: 4px;
+}
+
+QSlider::handle:vertical {
+    background: #007acc;
+    border: 1px solid #0099e6;
+    height: 18px;
+    margin: 0 -5px; 
+    border-radius: 9px;
+}
+
+/* ScrollBars - Ajustes para melhor integração com tema escuro */
+QScrollBar:horizontal {
+    border: none; /* Remover borda da barra inteira */
+    background: transparent; /* Fundo da barra inteira transparente, o groove cuidará da cor */
+    height: 12px; /* Altura um pouco menor */
+    margin: 0px 0px 0 0px; /* Remover margens se não houver botões de seta */
+}
+QScrollBar::groove:horizontal {
+    background: #222222; /* Cor de fundo do canal */
+    border: 1px solid #222222; /* Borda da mesma cor para evitar linhas estranhas */
+    border-radius: 6px; /* Levemente arredondado como o handle */
+    height: 10px; /* Altura do groove */
+}
+QScrollBar::handle:horizontal {
+    background: #3c3c3c; /* Handle um pouco mais claro que o groove */
+    min-width: 25px;
+    border-radius: 5px; /* Ajustar para ser menor ou igual ao groove radius */
+    border: 1px solid #4a4a4a;
+    margin: 1px 0; /* Pequena margem para não sobrepor a borda do groove */
+}
+QScrollBar::handle:horizontal:hover {
+    background: #4f4f4f;
+}
+QScrollBar::handle:horizontal:pressed {
+    background: #5a5a5a;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    /* Ocultar botões de seta por padrão para um visual mais limpo */
+    border: none;
+    background: none;
+    width: 0px; /* Torná-los invisíveis */
+}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: #222222; /* Mesma cor do groove para cobrir o fundo */
+}
+
+QScrollBar:vertical {
+    border: none; /* Remover borda da barra inteira */
+    background: transparent; /* Fundo da barra inteira transparente, o groove cuidará da cor */
+    width: 12px; /* Largura um pouco menor */
+    margin: 0px 0px 0px 0px; /* Remover margens se não houver botões de seta */
+}
+QScrollBar::groove:vertical {
+    background: #222222; /* Cor de fundo do canal */
+    border: 1px solid #222222; /* Borda da mesma cor */
+    border-radius: 6px;
+    width: 10px;
+}
+QScrollBar::handle:vertical {
+    background: #3c3c3c; /* Handle um pouco mais claro que o groove */
+    min-height: 25px;
+    border-radius: 5px;
+    border: 1px solid #4a4a4a;
+    margin: 0 1px; /* Pequena margem */
+}
+QScrollBar::handle:vertical:hover {
+    background: #4f4f4f;
+}
+QScrollBar::handle:vertical:pressed {
+    background: #5a5a5a;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    /* Ocultar botões de seta por padrão para um visual mais limpo */
+    border: none;
+    background: none;
+    height: 0px; /* Torná-los invisíveis */
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: #222222; /* Mesma cor do groove para cobrir o fundo */
+}
+
+/* Barra de Menu */
+QMenuBar {
+    background-color: #252526;
+    color: #cccccc;
+    border-bottom: 1px solid #333333;
+    padding: 2px;
+    spacing: 10px; /* Espaço entre os itens do menu */
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    color: #cccccc;
+    padding: 6px 10px; /* Padding para cada item como 'Arquivo', 'Editar' */
+    border-radius: 3px;
+}
+
+QMenuBar::item:selected { /* Quando o menu está aberto (ex: Arquivo clicado) */
+    background-color: #007acc;
+    color: #ffffff;
+}
+
+QMenuBar::item:pressed {
+    background-color: #005c99; /* Um pouco mais escuro ao pressionar */
+    color: #ffffff;
+}
+
+/* Menus (dropdown) */
+QMenu {
+    background-color: #2a2a2a; /* Fundo do menu dropdown, um pouco mais claro que o QMenuBar */
+    color: #cccccc;
+    border: 1px solid #3c3c3c; /* Borda um pouco mais visível que #333333 */
+    padding: 5px; /* Padding interno do menu */
+    margin: 2px; /* Pequena margem para destacar do QMenuBar item */
+}
+
+QMenu::item {
+    background-color: transparent;
+    color: #cccccc;
+    padding: 6px 20px 6px 25px; /* Top/Bottom, Right, Left (espaço para ícone/submenu indicator) */
+    border-radius: 3px;
+    margin: 1px 0; /* Margem vertical entre itens */
+}
+
+QMenu::item:selected { /* Hover sobre o item do menu */
+    background-color: #007acc;
+    color: #ffffff;
+}
+
+QMenu::item:disabled {
+    color: #666666; /* Cor para itens desabilitados */
+    background-color: transparent;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #3c3c3c;
+    margin-left: 10px;
+    margin-right: 5px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+QMenu::indicator { /* Seta para submenus */
+    width: 13px;
+    height: 13px;
+    padding-left: 6px; /* Espaço à esquerda da seta */
+    /* A imagem da seta (sub-menu) é geralmente controlada pelo estilo do sistema ou pode ser setada com image: url(...) */
+}
+
+/* Barra de Status */
+QStatusBar {
+    background-color: #252526;
+    color: #cccccc;
+    border-top: 1px solid #333333;
+}
+
+/* Estilo específico para o QTabBar dos docks com objectName */
+QTabBar#CentralDockTabBar::tab {
+    background-color: #2d2d2d !important; 
+    color: #cccccc !important;
+    border: 1px solid #4c566a !important; /* Um pouco mais visível que #333333 */
+    border-bottom: none !important;
+    padding: 7px 15px !important; 
+    border-top-left-radius: 5px !important;
+    border-top-right-radius: 5px !important;
+    margin-right: 2px !important;
+}
+
+QTabBar#CentralDockTabBar::tab:selected {
+    background-color: #1e1e1e !important; 
+    color: #00aaff !important; /* Um azul um pouco mais brilhante */
+    border-left-color: #00aaff !important; /* Destaque na borda esquerda */
+    border-top-color: #00aaff !important;  /* Destaque na borda superior */
+    border-right-color: #00aaff !important; /* Destaque na borda direita */
+}
+
+QTabBar#CentralDockTabBar::tab:hover:!selected {
+    background-color: #3a3f4b !important; /* Um pouco mais claro no hover */
+    color: #e0e0e0 !important;
+}
+
+/* TabWidget e Abas (especialmente para Docks Tabificados) */
+/* Estilo para o painel de conteúdo de um QTabWidget (se usado explicitamente) */
+QTabWidget::pane { /* Conteúdo da aba */
+    border: 1px solid #333333;
+    background-color: #1e1e1e; 
+}
+
+/* Estilo para abas de QDockWidgets tabificados */
+/* Estas regras DEVEM ter !important para prioridade */
+QDockWidget QTabBar::tab { /* Aba não selecionada */
+    background-color: #2d2d2d !important; 
+    color: #cccccc !important;
+    border: 1px solid #333333 !important;
+    border-bottom: none !important; /* Para integrar com o painel */
+    padding: 6px 12px !important;
+    border-top-left-radius: 4px !important;
+    border-top-right-radius: 4px !important;
+    margin-right: 2px; /* Adiciona um pequeno espaçamento entre as abas */
+}
+
+QDockWidget QTabBar::tab:selected {
+    background-color: #1e1e1e !important; /* Fundo da aba selecionada igual ao fundo do painel */
+    color: #0099e6 !important; /* Texto da aba selecionada com cor de destaque */
+    /* A borda da aba selecionada geralmente é manipulada pelo QTabWidget::pane e pela ausência de border-bottom na aba */
+}
+
+QDockWidget QTabBar::tab:hover:!selected {
+    background-color: #3f3f3f !important;
+    color: #ffffff !important; /* Opcional: clarear texto no hover da aba não selecionada */
+}
+
+/* Regras genéricas para QTabBar caso QTabWidget seja usado em outro lugar e precise de estilo similar */
+/* Estas regras NÃO DEVEM ter !important */
+QTabBar::tab { 
+    background-color: #2d2d2d; 
+    color: #cccccc;
+    border: 1px solid #333333;
+    border-bottom: none; 
+    padding: 6px 12px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #1e1e1e; 
+    color: #0099e6; 
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #3f3f3f;
+    color: #ffffff; 
+}
+
+/* Adicionar estilo para QDialog */
+QDialog {
+    background-color: #2a2a2a; /* Fundo um pouco diferente para diálogos */
+    border: 1px solid #333333; /* Borda sutil para o diálogo */
+}
+
+/* Estilo para os frames internos do ActionConfigDialog */
+QFrame#actionConfigFrame, QFrame#actionParamsFrame {
+    background-color: #2a2a2a; /* MESMA COR DO QDialog para integrar */
+    border-radius: 5px;
+    /* padding: 10px; */ /* O padding já é definido no Python, pode ser redundante aqui */
+    border: none; /* Remover borda dos frames internos se o diálogo já tem uma */
+}
+
+/* Ajuste para Labels dentro dos frames de formulário para melhor alinhamento vertical com QLineEdit */
+QFrame#configFormFrame QLabel {
+    padding-top: 4px; /* Ajuste fino para alinhar linha de base do texto do QLabel com QLineEdit */
+    /* Testar valores como 3px, 4px ou 5px dependendo da fonte e padding do QLineEdit */
+}
+
+/* Estilos para elementos dentro de QDialog para garantir consistência */
+QDialog QLabel {
+    color: #cccccc; /* Texto claro, igual ao global */
+    background-color: transparent; /* Sem fundo */
+    font-size: 10pt; /* Consistente com o global */
+    /* remover padding específico que existia no setStyleSheet local do ActionConfigDialog */
+}
+
+QDialog QLineEdit, QDialog QComboBox {
+    background-color: #2a2a2a; /* Fundo dos inputs, igual ao global */
+    color: #cccccc; /* Texto claro, igual ao global */
+    border: 1px solid #333333; /* Borda sutil, igual ao global */
+    border-radius: 3px; /* Igual ao global */
+    padding: 6px; /* Igual ao global */
+    font-size: 10pt; /* Igual ao global */
+}
+
+QDialog QComboBox {
+    min-width: 6em; /* Igual ao global */
+}
+
+QDialog QLineEdit:focus, QDialog QComboBox:focus {
+    border: 1px solid #007acc; /* Destaque azul no foco, igual ao global */
+}
+
+/* Para QComboBox dentro de QDialog, garantir que o dropdown também seja escuro */
+QDialog QComboBox QAbstractItemView { 
+    background-color: #252526; /* Fundo do dropdown */
+    border: 1px solid #333333;
+    selection-background-color: #007acc; /* Cor de seleção */
+    color: #cccccc; /* Texto do item */
+    padding: 4px;
+}
+
+/* Pode ser necessário ajustar estilos para QFrame se usado como container dentro de docks, 
+   como foi feito no OBSConfigWidget antes da remoção do estilo local. 
+   A regra QDockWidget > QWidget já deve cobrir o fundo do widget principal do dock.
+*/
+
+/* Se algum QFrame for usado explicitamente com setFrameStyle(QFrame.StyledPanel) e não tiver 
+   um objectName para estilização específica, ele pode pegar o estilo padrão de QFrame, 
+   que pode não ter cor de fundo definida aqui. 
+   Se for necessário, adicione uma regra genérica para QFrame:
+QFrame {
+    background-color: #252526; 
+    border: 1px solid #333333; 
+}
+   Mas cuidado para não sobrescrever frames que deveriam ser transparentes.
+*/
+
+/* Adicionar estilos para QMenuBar, QMenu, e QAction para integrar ao tema escuro */
+QMenuBar {
+    outline: none; /* Remove o contorno pontilhado padrão ao focar */
+} 

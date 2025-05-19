@@ -1,0 +1,402 @@
+/* switchpilot/ui/themes/modern_dark_obs.qss */
+
+/* Paleta de Cores (baseada no documento e inspiração OBS/Nord)
+    Fundo Principal (QMainWindow, Fundos gerais): #2e3440 (Nord Polar Night)
+    Fundo Painéis (QDockWidget, QGroupBox, QFrame): #3b4252 (Nord Polar Night - um pouco mais claro)
+    Bordas Sutis: #4c566a (Nord Polar Night - para divisão)
+    Texto Principal: #eceff4 (Nord Snow Storm)
+    Texto Secundário/Desabilitado: #d8dee9 (Nord Snow Storm - um pouco mais escuro)
+    Elementos Primários/Seleção/Hover (Botões, itens de lista selecionados): #5e81ac (Nord Frost - Azul)
+    Destaque Ativo (Botões pressionados, foco): #81a1c1 (Nord Frost - Azul mais claro)
+    Alertas/Erros: #bf616a (Nord Aurora - Vermelho)
+    Sucesso: #a3be8c (Nord Aurora - Verde)
+    Tipografia: "Segoe UI"
+*/
+
+/* Estilos Globais */
+QWidget {
+    background-color: #2e3440;
+    color: #eceff4;
+    font-family: "Segoe UI";
+    font-size: 10pt;
+}
+
+QMainWindow {
+    background-color: #2e3440;
+}
+
+/* QDockWidget - Painéis como no OBS */
+QDockWidget {
+    titlebar-close-icon: none; /* Opcional: Remover ícones padrão se formos usar customizados */
+    titlebar-normal-icon: none; /* Opcional */
+}
+
+QDockWidget::title {
+    background-color: #3b4252;
+    color: #eceff4;
+    padding: 6px;
+    border: 1px solid #4c566a;
+    border-bottom: 1px solid #2e3440; /* Para integrar com o conteúdo */
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+QDockWidget > QWidget { /* Conteúdo dentro do DockWidget */
+    background-color: #3b4252;
+    border: 1px solid #4c566a;
+    border-top: none; /* Evitar borda dupla com o título */
+}
+
+/* QGroupBox - Alternativa para agrupar elementos, similar aos painéis */
+QGroupBox {
+    background-color: #3b4252;
+    border: 1px solid #4c566a;
+    border-radius: 4px;
+    margin-top: 18px; /* Espaço para o título */
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 2px 8px;
+    background-color: #434c5e; /* Um pouco diferente para o título do groupbox */
+    color: #eceff4;
+    border: 1px solid #4c566a;
+    border-bottom: none;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    font-weight: bold;
+}
+
+/* Botões */
+QPushButton {
+    background-color: #4c566a; /* Cinza escuro para botões */
+    color: #eceff4;
+    border: 1px solid #5e81ac;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 10pt;
+}
+
+QPushButton:hover {
+    background-color: #5e81ac; /* Azul ao passar o mouse */
+    border: 1px solid #81a1c1;
+}
+
+QPushButton:pressed {
+    background-color: #81a1c1; /* Azul mais claro ao pressionar */
+}
+
+QPushButton:disabled {
+    background-color: #434c5e;
+    color: #d8dee9;
+    border-color: #4c566a;
+}
+
+/* Campos de Texto */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #2e3440; /* Fundo bem escuro para contraste */
+    color: #eceff4;
+    border: 1px solid #4c566a;
+    border-radius: 3px;
+    padding: 6px;
+    font-size: 10pt;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #5e81ac; /* Destaque azul no foco */
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: #434c5e;
+    color: #eceff4;
+    border: 1px solid #4c566a;
+    border-radius: 3px;
+    padding: 6px;
+    min-width: 6em;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 1px;
+    border-left-color: #4c566a;
+    border-left-style: solid;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox QAbstractItemView { /* Estilo da lista dropdown */
+    background-color: #3b4252;
+    border: 1px solid #4c566a;
+    selection-background-color: #5e81ac;
+    color: #eceff4;
+    padding: 4px;
+}
+
+/* CheckBox e RadioButton */
+QCheckBox, QRadioButton {
+    spacing: 5px;
+    color: #eceff4;
+    font-size: 10pt;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    border: 1px solid #4c566a;
+    background-color: #2e3440;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border: 1px solid #5e81ac;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #5e81ac;
+    border: 1px solid #81a1c1;
+    image: url(none); /* Para customizar o checkmark se necessário */
+}
+
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {
+    border-color: #434c5e;
+    background-color: #3b4252;
+}
+
+/* Labels */
+QLabel {
+    color: #eceff4;
+    background-color: transparent; /* Para não sobrescrever o fundo do container */
+    font-size: 10pt;
+}
+
+QLabel[heading="true"] { /* Para títulos de seção dentro de painéis */
+    font-size: 11pt;
+    font-weight: bold;
+    color: #88c0d0; /* Nord Frost - Ciano para títulos */
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* Sliders */
+QSlider::groove:horizontal {
+    border: 1px solid #4c566a;
+    background: #2e3440;
+    height: 8px;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: #5e81ac;
+    border: 1px solid #81a1c1;
+    width: 18px;
+    margin: -5px 0; /* Alinhar verticalmente */
+    border-radius: 9px;
+}
+
+QSlider::groove:vertical {
+    border: 1px solid #4c566a;
+    background: #2e3440;
+    width: 8px;
+    border-radius: 4px;
+}
+
+QSlider::handle:vertical {
+    background: #5e81ac;
+    border: 1px solid #81a1c1;
+    height: 18px;
+    margin: 0 -5px; /* Alinhar horizontalmente */
+    border-radius: 9px;
+}
+
+/* ScrollBars */
+QScrollBar:horizontal {
+    border: 1px solid #434c5e;
+    background: #2e3440;
+    height: 15px;
+    margin: 0px 20px 0 20px;
+}
+QScrollBar::handle:horizontal {
+    background: #4c566a;
+    min-width: 20px;
+    border-radius: 7px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    border: 1px solid #434c5e;
+    background: #434c5e;
+    width: 20px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal {
+    subcontrol-position: left;
+}
+QScrollBar:left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+    /* Pode adicionar ícones aqui */
+    width: 3px;
+    height: 3px;
+    background: #eceff4;
+}
+
+QScrollBar:vertical {
+    border: 1px solid #434c5e;
+    background: #2e3440;
+    width: 15px;
+    margin: 20px 0 20px 0;
+}
+QScrollBar::handle:vertical {
+    background: #4c566a;
+    min-height: 20px;
+    border-radius: 7px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: 1px solid #434c5e;
+    background: #434c5e;
+    height: 20px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    subcontrol-position: top;
+}
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    /* Pode adicionar ícones aqui */
+    width: 3px;
+    height: 3px;
+    background: #eceff4;
+}
+
+/* QListView e QTreeView (para listas como Cenas, Fontes no OBS) */
+QListView, QTreeView {
+    background-color: #3b4252; /* Fundo do painel */
+    color: #eceff4;
+    border: 1px solid #4c566a;
+    border-radius: 3px;
+    alternate-background-color: #434c5e; /* Para linhas alternadas, se desejado */
+    font-size: 10pt;
+}
+
+QListView::item, QTreeView::item {
+    padding: 5px;
+    border-bottom: 1px solid #434c5e; /* Linha divisória sutil */
+}
+
+QListView::item:selected, QTreeView::item:selected {
+    background-color: #5e81ac; /* Azul para item selecionado */
+    color: #eceff4;
+}
+
+QListView::item:hover, QTreeView::item:hover {
+    background-color: #4c566a; /* Cinza mais claro ao passar o mouse */
+}
+
+QHeaderView::section { /* Cabeçalhos de QTreeView e QTableView */
+    background-color: #434c5e;
+    color: #eceff4;
+    padding: 4px;
+    border: 1px solid #4c566a;
+    font-weight: bold;
+}
+
+/* TabWidget */
+QTabWidget::pane {
+    border: 1px solid #4c566a;
+    border-top: none;
+    background-color: #3b4252;
+    padding: 10px;
+}
+
+QTabBar::tab {
+    background-color: #434c5e;
+    color: #d8dee9;
+    border: 1px solid #4c566a;
+    border-bottom: none; /* Conecta com o pane */
+    padding: 8px 16px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected, QTabBar::tab:hover {
+    background-color: #5e81ac;
+    color: #eceff4;
+}
+
+QTabBar::tab:!selected {
+    margin-top: 2px; /* Aba não selecionada um pouco mais para baixo */
+}
+
+/* Menu Bar */
+QMenuBar {
+    background-color: #3b4252;
+    color: #eceff4;
+    border-bottom: 1px solid #4c566a;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    padding: 6px 10px;
+}
+
+QMenuBar::item:selected { /* Hover */
+    background-color: #5e81ac;
+}
+
+QMenuBar::item:pressed {
+    background-color: #81a1c1;
+}
+
+/* Menu Popup */
+QMenu {
+    background-color: #3b4252;
+    color: #eceff4;
+    border: 1px solid #4c566a;
+    padding: 5px;
+}
+
+QMenu::item {
+    padding: 6px 20px 6px 20px;
+    border-radius: 3px; /* Para cantos arredondados no item do menu */
+}
+
+QMenu::item:selected { /* Hover */
+    background-color: #5e81ac;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #4c566a;
+    margin-left: 10px;
+    margin-right: 5px;
+}
+
+/* Tooltips */
+QToolTip {
+    background-color: #2e3440;
+    color: #eceff4;
+    border: 1px solid #81a1c1; /* Borda azul clara para destaque */
+    padding: 5px;
+    border-radius: 3px;
+    opacity: 230; /* Um pouco de transparência */
+}
+
+/* Linha Separadora */
+QFrame[frameShape="HLine"] {
+    border: none;
+    height: 1px;
+    background-color: #4c566a;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+QFrame[frameShape="VLine"] {
+    border: none;
+    width: 1px;
+    background-color: #4c566a;
+    margin-left: 5px;
+    margin-right: 5px;
+} 
