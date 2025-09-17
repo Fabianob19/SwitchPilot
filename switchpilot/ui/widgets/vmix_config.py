@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QFormLayout, QLineEdit, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QFormLayout, QLineEdit,
                              QPushButton, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy)
 from PyQt5.QtCore import pyqtSignal, Qt
 

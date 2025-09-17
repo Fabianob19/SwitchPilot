@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox, QPushButton, QDialogButtonBox
 from PyQt5.QtCore import pyqtSignal, Qt
 
+
 class ThresholdConfigDialog(QDialog):
     thresholds_updated = pyqtSignal(float, float, float)  # static, sequence, interval
 
@@ -109,4 +110,4 @@ class ThresholdConfigDialog(QDialog):
     def accept(self):
         # Emite o sinal com os valores atuais antes de fechar
         self.thresholds_updated.emit(self.static_spin.value(), self.seq_spin.value(), self.interval_spin.value())
-        super().accept() 
+        super().accept()

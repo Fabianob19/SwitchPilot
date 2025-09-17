@@ -988,14 +988,14 @@ class ReferenceManagerWidget(QWidget):
                     
                     # Pequena pausa para não sobrecarregar
                     time.sleep(0.01)
-                    
+
                 except Exception as inner_e:
                     print(f"[DEBUG] Erro interno na captura NDI: {inner_e}")
                     import traceback
                     traceback.print_exc()
                     break
-            
-                                # Timeout - não conseguiu capturar frame válido
+
+            # Timeout - não conseguiu capturar frame válido
             print(f"[DEBUG] Timeout de {timeout_seconds}s atingido sem capturar frame válido")
             print(f"[DEBUG] Total de tentativas: {frames_attempted}")
             NDI.recv_destroy(ndi_recv)
@@ -1008,7 +1008,7 @@ class ReferenceManagerWidget(QWidget):
             print(f"Erro ao capturar frame NDI: {e}")
             try:
                 NDI.destroy()
-            except:
+            except Exception:
                 pass
             # Aguardar antes de retornar para liberar recursos
             time.sleep(1)
@@ -1034,4 +1034,4 @@ class ReferenceManagerWidget(QWidget):
 # REMOVIDO: widget.setWindowTitle("Teste ReferenceManagerWidget")
 # REMOVIDO: widget.setGeometry(100, 100, 400, 600)
 # REMOVIDO: widget.show()
-# REMOVIDO: sys.exit(app.exec_()) 
+# REMOVIDO: sys.exit(app.exec_())
