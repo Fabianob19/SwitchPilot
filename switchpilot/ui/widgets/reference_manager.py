@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QListWidget, QFrame, QSizePolicy, QComboBox, QFormLayout, QSpacerItem, QMessageBox, QListWidgetItem, QInputDialog, QFileDialog, QDialog, QMenu, QAction)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 import pyautogui  # Adicionada importação
@@ -113,7 +113,7 @@ class ReferenceManagerWidget(QWidget):
         else:
             # Apenas placeholder: se quiser, poderíamos exibir uma dica que NDI não está instalado
             pass
-        
+
         actions_layout.addLayout(source_capture_layout)
         actions_layout.addItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
@@ -125,26 +125,26 @@ class ReferenceManagerWidget(QWidget):
         self.select_region_button = QPushButton("Selecionar Região PGM")
         self.select_region_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         actions_layout.addWidget(self.select_region_button)
-        
+
         actions_layout.addItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         # --- Adicionar Referências (Unificado) ---
         self.add_reference_button = QPushButton("Adicionar Referência...")
         self.add_reference_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        
+
         self.add_reference_menu = QMenu(self)
-        
+
         self.add_image_action = QAction("Imagem de Arquivo...", self)
         self.add_image_action.triggered.connect(self._handle_add_existing_reference)
         self.add_reference_menu.addAction(self.add_image_action)
-        
+
         self.add_sequence_action = QAction("Vídeo/GIF (Sequência) de Arquivo...", self)
         self.add_sequence_action.triggered.connect(self._handle_add_video_gif_sequence)
         self.add_reference_menu.addAction(self.add_sequence_action)
-        
+
         self.add_reference_button.setMenu(self.add_reference_menu)
         actions_layout.addWidget(self.add_reference_button)
-        
+
         main_layout.addWidget(actions_group)
 
         # --- Seção da Lista de Referências (Simplificada) ---
@@ -157,7 +157,7 @@ class ReferenceManagerWidget(QWidget):
         self.reference_list_widget.setMinimumHeight(150)  # Manter para garantir algum espaço inicial
         self.reference_list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.reference_list_widget, 1)  # Adicionado diretamente ao main_layout com stretch
-        
+
         list_actions_layout = QHBoxLayout()
         self.configure_actions_button = QPushButton("Configurar Ações da Selecionada")
         self.remove_reference_button = QPushButton("Remover Selecionada")
@@ -182,7 +182,7 @@ class ReferenceManagerWidget(QWidget):
         if NDI_AVAILABLE:
             self.btn_refresh_ndi.clicked.connect(self._populate_ndi_list)
         # self.btn_pick_window.clicked.connect(self._pick_window_by_click)  # Removido para simplificar
-        
+
         # Inicializar lista de monitores por padrão (já que "Monitor" é o primeiro item)
         self._populate_monitor_list()
 
@@ -196,12 +196,12 @@ class ReferenceManagerWidget(QWidget):
         try:
             source_type = self.source_type_combo.currentText()
             print(f"[DEBUG] Tipo de fonte selecionado: {source_type}")
-            
+
             if source_type == "Monitor":
                 print("[DEBUG] Iniciando captura de Monitor...")
                 selected_monitor_idx = self.monitor_list_combo.currentIndex()
                 print(f"[DEBUG] Índice do monitor selecionado: {selected_monitor_idx}")
-                
+
                 if selected_monitor_idx < 0 or self.monitor_list_combo.itemText(selected_monitor_idx) == "Nenhum monitor encontrado":
                     QMessageBox.warning(self, "Seleção de Monitor", "Por favor, selecione um monitor válido na lista.")
                     return
@@ -212,31 +212,31 @@ class ReferenceManagerWidget(QWidget):
                     if monitor_number >= len(sct.monitors):
                         QMessageBox.warning(self, "Erro de Monitor", "Monitor selecionado não está disponível.")
                         return
-                    
+
                     monitor = sct.monitors[monitor_number]
                     print(f"[DEBUG] Monitor selecionado: {monitor}")
-                    
+
                     screenshot = sct.grab(monitor)
                     img_to_show = np.array(screenshot)
                     img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGRA2BGR)
                     print(f"[DEBUG] Screenshot capturado: {img_to_show.shape}")
-                    
+
                 capture_source_name = f"Monitor {monitor_number}"
                 source_id = monitor_number
                 source_kind = 'monitor'
-                
+
             elif source_type == "Janela":
                 print("[DEBUG] Iniciando captura de Janela...")
                 selected_window_idx = self.window_list_combo.currentIndex()
                 print(f"[DEBUG] Índice da janela selecionada: {selected_window_idx}")
-                
+
                 if selected_window_idx < 0 or self.window_list_combo.itemText(selected_window_idx) in ["Nenhuma janela encontrada", "Erro ao listar janelas"]:
                     QMessageBox.warning(self, "Seleção de Janela", "Por favor, selecione uma janela válida na lista.")
                     return
 
                 window_obj = self.window_list_combo.itemData(selected_window_idx)
                 print(f"[DEBUG] Objeto da janela: {window_obj}")
-                
+
                 if not window_obj:
                     QMessageBox.warning(self, "Seleção de Janela", "Não foi possível obter dados da janela selecionada.")
                     return
@@ -247,35 +247,35 @@ class ReferenceManagerWidget(QWidget):
                 # Alguns sistemas/janelas podem retornar coordenadas relativas ou (0,0,0,0) se não estiverem visíveis/ativas
                 # Adicionando uma verificação extra
                 print(f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, width={window_obj.width}, height={window_obj.height}")
-                
+
                 if window_obj.left is None or window_obj.top is None or window_obj.width is None or window_obj.height is None:
                     QMessageBox.warning(self, "Seleção de Janela", f"Não foi possível obter as coordenadas da janela '{window_obj.title}'. Tente trazê-la para frente.")
                     return
 
                 region_capture = (window_obj.left, window_obj.top, window_obj.width, window_obj.height)
                 print(f"[DEBUG] Região de captura: {region_capture}")
-                
+
                 pil_img = pyautogui.screenshot(region=region_capture)
                 img_to_show = np.array(pil_img)
                 img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_RGB2BGR)
                 print(f"[DEBUG] Screenshot da janela capturado: {img_to_show.shape}")
-                
+
                 capture_source_name = f"Janela: {window_obj.title}"
                 source_id = window_obj  # Ou window_obj._hWnd se precisarmos de um ID simples e tiver no objeto
                 source_kind = 'window'
-                
+
             elif source_type == "NDI":
                 print("[DEBUG] Iniciando captura NDI...")
                 selected_ndi_idx = self.ndi_list_combo.currentIndex()
                 print(f"[DEBUG] Índice da fonte NDI selecionada: {selected_ndi_idx}")
-                
+
                 if selected_ndi_idx < 0 or self.ndi_list_combo.itemText(selected_ndi_idx) in ["Carregando fontes NDI...", "Nenhuma fonte NDI encontrada", "Erro ao listar fontes NDI"]:
                     QMessageBox.warning(self, "Seleção de Fonte", "Por favor, selecione uma fonte NDI válida na lista.")
                     return
-                
+
                 ndi_source = self.ndi_list_combo.itemData(selected_ndi_idx)
                 print(f"[DEBUG] Dados da fonte NDI: {ndi_source}")
-                
+
                 if not ndi_source:
                     QMessageBox.warning(self, "Seleção de Fonte", "Não foi possível obter dados da fonte NDI selecionada.")
                     return
@@ -284,11 +284,11 @@ class ReferenceManagerWidget(QWidget):
                 # Capturar frame da fonte NDI
                 img_to_show = self._capture_ndi_frame(ndi_source)
                 print(f"[DEBUG] Resultado da captura NDI: {img_to_show.shape if img_to_show is not None else 'None'}")
-                
+
                 if img_to_show is None:
                     QMessageBox.warning(self, "Erro NDI", "Não foi possível capturar frame da fonte NDI selecionada.")
                     return
-                
+
                 capture_source_name = f"NDI: {self.ndi_list_combo.itemText(selected_ndi_idx)}"
                 source_id = ndi_source
                 source_kind = 'ndi'
@@ -305,11 +305,11 @@ class ReferenceManagerWidget(QWidget):
                     if img_to_show.size == 0:
                         QMessageBox.warning(self, "Erro de Imagem", "A imagem capturada está vazia.")
                         return
-                    
+
                     # Verificar se a imagem é contígua na memória
                     if not img_to_show.flags['C_CONTIGUOUS']:
                         img_to_show = np.ascontiguousarray(img_to_show)
-                    
+
                     window_name = f"Selecione a Região PGM - {capture_source_name}"
                     # Reduzir para caber na tela sem perder proporção e depois remapear a ROI
                     h, w = img_to_show.shape[:2]
@@ -332,15 +332,15 @@ class ReferenceManagerWidget(QWidget):
                     roi_disp = cv2.selectROI(window_name, display_img, False, False)
                     # Remapear de volta para o frame original usado na análise
                     roi = (int(roi_disp[0] / scale), int(roi_disp[1] / scale), int(roi_disp[2] / scale), int(roi_disp[3] / scale))
-                    
+
                     cv2.destroyAllWindows()
-                    
+
                 except Exception as cv_error:
                     try:
                         cv2.destroyAllWindows()
                     except Exception:
                         pass
-                    
+
                     QMessageBox.critical(self, "Erro OpenCV", f"Erro ao selecionar região: {cv_error}")
                     return
 
@@ -357,7 +357,7 @@ class ReferenceManagerWidget(QWidget):
 
                     # --- Adicionar automaticamente a primeira referência ---
                     first_ref_image = img_to_show[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
-                    
+
                     if first_ref_image.size == 0:
                         QMessageBox.warning(self, "Erro de Captura Automática", "A região selecionada resultou em uma imagem vazia.")
                     else:
@@ -375,7 +375,7 @@ class ReferenceManagerWidget(QWidget):
                         text, ok = QInputDialog.getText(self, "Nome da Referência",
                                                         "Digite o nome para a imagem de referência (sem extensão):",
                                                         text=suggested_base_name)
-                        
+
                         if ok and text:
                             # Sanitizar o nome do arquivo
                             base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip())  # Permitir pontos para extensões futuras, mas vamos adicionar .png
@@ -385,7 +385,7 @@ class ReferenceManagerWidget(QWidget):
                             # Adicionar extensão .png se não estiver lá (ou forçar para consistência)
                             if base_filename.lower().endswith('.png'):
                                 base_filename = base_filename[:-4]
-                            
+
                             # Lógica para evitar sobrescrever (nome_01.png, nome_02.png)
                             final_filename = f"{base_filename}.png"
                             filepath = os.path.join(self.references_dir, final_filename)
@@ -394,11 +394,11 @@ class ReferenceManagerWidget(QWidget):
                                 final_filename = f"{base_filename}_{count:02d}.png"
                                 filepath = os.path.join(self.references_dir, final_filename)
                                 count += 1
-                            
+
                             if cv2.imwrite(filepath, first_ref_image):
                                 new_ref_data = {'name': final_filename, 'type': 'static', 'path': filepath, 'actions': []}
                                 self.references_data.append(new_ref_data)
-                                
+
                                 self._display_reference_in_list(new_ref_data)
                                 self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
                                 self.references_updated.emit(self.get_all_references_data())  # Usar getter
@@ -476,10 +476,10 @@ class ReferenceManagerWidget(QWidget):
                     width = monitor['width']
                     height = monitor['height']
                     self.monitor_list_combo.addItem(f"Monitor {i} ({width}x{height})")
-            
+
             if self.monitor_list_combo.count() == 0:
                 self.monitor_list_combo.addItem("Nenhum monitor encontrado")
-                
+
         except Exception as e:
             self.monitor_list_combo.addItem("Erro ao listar monitores")
             print(f"Erro ao listar monitores: {e}")
@@ -503,7 +503,7 @@ class ReferenceManagerWidget(QWidget):
                     # Poderíamos usar window.title como texto e o objeto window como userData.
                     self.window_list_combo.addItem(window.title, userData=window) # Armazenando o objeto window
                     found_windows = True
-            
+
             if not found_windows:
                 self.window_list_combo.addItem("Nenhuma janela encontrada")
                 # Aqui você poderia emitir um sinal ou logar se preferir
@@ -522,21 +522,21 @@ class ReferenceManagerWidget(QWidget):
             if not NDI.initialize():
                 self.ndi_list_combo.addItem("Erro: NDI não pode ser inicializado")
                 return
-            
+
             # Criar um finder para descobrir fontes NDI (usando configuração padrão)
             ndi_find = NDI.find_create_v2()
             if not ndi_find:
                 self.ndi_list_combo.addItem("Erro: Não foi possível criar NDI finder")
                 NDI.destroy()
                 return
-            
+
             # Aguardar um pouco para descobrir fontes
             import time
             time.sleep(2)  # Aguardar 2 segundos para descoberta
-            
+
             # Obter lista de fontes NDI
             sources = NDI.find_get_current_sources(ndi_find)
-            
+
             if sources and len(sources) > 0:
                 for source in sources:
                     source_name = source.ndi_name if hasattr(source, 'ndi_name') else str(source)
@@ -550,11 +550,11 @@ class ReferenceManagerWidget(QWidget):
             else:
                 self.ndi_list_combo.addItem("Nenhuma fonte NDI encontrada")
                 print("Nenhuma fonte NDI descoberta")
-            
+
             # Limpar recursos NDI
             NDI.find_destroy(ndi_find)
             NDI.destroy()
-            
+
         except Exception as e:
             self.ndi_list_combo.addItem("Erro ao listar fontes NDI")
             print(f"Erro ao tentar listar fontes NDI: {e}")
@@ -571,14 +571,14 @@ class ReferenceManagerWidget(QWidget):
     def _handle_add_existing_reference(self):
         # Filtros para os tipos de arquivo de imagem mais comuns
         image_filters = "Imagens (*.png *.jpg *.jpeg *.bmp *.gif);;Todos os Arquivos (*)"
-        
+
         # Abrir o diálogo para selecionar um ou mais arquivos
         # O diretório inicial pode ser o último usado ou um padrão
-        filepaths, _ = QFileDialog.getOpenFileNames(self, 
-                                                    "Selecionar Imagens de Referência Existentes", 
+        filepaths, _ = QFileDialog.getOpenFileNames(self,
+                                                    "Selecionar Imagens de Referência Existentes",
                                                     "", # Diretório inicial (vazio usa o padrão)
                                                     image_filters)
-        
+
         if not filepaths: # Usuário cancelou o diálogo
             return
 
@@ -590,7 +590,7 @@ class ReferenceManagerWidget(QWidget):
 
             original_filename = os.path.basename(original_filepath)
             base_name, ext = os.path.splitext(original_filename)
-            
+
             # Sanitizar o nome base do arquivo
             sanitized_base_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', base_name.strip())
             if not sanitized_base_name:
@@ -599,7 +599,7 @@ class ReferenceManagerWidget(QWidget):
             # Garantir que a extensão seja .png para consistência interna, ou manter original se preferir
             # Por enquanto, vamos manter a extensão original, mas o ideal seria converter para PNG.
             # Para simplificar agora, apenas copiamos. Poderíamos adicionar conversão depois.
-            # final_display_name = f"{sanitized_base_name}.png" 
+            # final_display_name = f"{sanitized_base_name}.png"
             final_display_name = f"{sanitized_base_name}{ext}"
 
             target_filepath = os.path.join(self.references_dir, final_display_name)
@@ -608,26 +608,26 @@ class ReferenceManagerWidget(QWidget):
                 final_display_name = f"{sanitized_base_name}_{count:02d}{ext}"
                 target_filepath = os.path.join(self.references_dir, final_display_name)
                 count += 1
-            
+
             try:
                 shutil.copy2(original_filepath, target_filepath) # copy2 preserva metadados
-                
+
                 new_ref_data = {'name': final_display_name, 'type': 'static', 'path': target_filepath, 'actions': []}
                 self.references_data.append(new_ref_data)
-                
+
                 self._display_reference_in_list(new_ref_data)
                 self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
                 added_count += 1
                 # REMOVIDO: print(f"DEBUG: QListWidget count after adding existing: {self.reference_list_widget.count()}")
 
             except Exception as e:
-                QMessageBox.critical(self, "Erro ao Copiar Arquivo", 
+                QMessageBox.critical(self, "Erro ao Copiar Arquivo",
                                      f"Não foi possível copiar o arquivo '{original_filename}' para '{self.references_dir}'.\nErro: {e}")
                 continue # Pular para o próximo arquivo se houver erro
-        
+
         if added_count > 0:
             self.references_updated.emit(self.get_all_references_data()) # Usar getter
-            QMessageBox.information(self, "Referências Adicionadas", 
+            QMessageBox.information(self, "Referências Adicionadas",
                                   f"{added_count} imagem(ns) de referência adicionada(s) com sucesso.")
 
     def _handle_remove_reference(self):
@@ -644,7 +644,7 @@ class ReferenceManagerWidget(QWidget):
             row = self.reference_list_widget.row(current_item)
             self.reference_list_widget.takeItem(row)
             removed_ref_data = self.references_data.pop(row)
-            
+
             # Opcional: remover o arquivo físico (MANTIDO COMENTADO POR PADRÃO)
             # try:
             #     if os.path.exists(removed_ref_data['path']):
@@ -665,12 +665,12 @@ class ReferenceManagerWidget(QWidget):
 
         # O texto do item pode ser "nome.png" ou "[Sequência] nome_seq"
         # Precisamos do nome original armazenado nos dados da referência
-        
+
         selected_ref_data = None
         current_row = self.reference_list_widget.row(current_item)
         if 0 <= current_row < len(self.references_data):
             selected_ref_data = self.references_data[current_row]
-        
+
         if not selected_ref_data:
             msg = (
                 f"Não foi possível encontrar os dados para a referência "
@@ -683,14 +683,14 @@ class ReferenceManagerWidget(QWidget):
         if not self.main_controller:
             QMessageBox.critical(self, "Erro Crítico", "MainController não está disponível no ReferenceManagerWidget. Não é possível abrir o diálogo de ações.")
             return
-            
+
         dialog = ActionConfigDialog(selected_ref_data, self.main_controller, self)
         if dialog.exec_() == QDialog.Accepted:
             updated_actions = dialog.get_action_config()
             selected_ref_data['actions'] = updated_actions
-            # REMOVIDO: print(f"[RMW DEBUG] Após ActionConfigDialog, selected_ref_data['actions'] atualizado para: {selected_ref_data['actions']}") 
-            # REMOVIDO: print(f"[RMW DEBUG] self.references_data COMPLETA após atualização: {self.references_data}") 
-            self.references_updated.emit(self.get_all_references_data()) 
+            # REMOVIDO: print(f"[RMW DEBUG] Após ActionConfigDialog, selected_ref_data['actions'] atualizado para: {selected_ref_data['actions']}")
+            # REMOVIDO: print(f"[RMW DEBUG] self.references_data COMPLETA após atualização: {self.references_data}")
+            self.references_updated.emit(self.get_all_references_data())
             # REMOVIDO: print(f"Ações para '{ref_name}' atualizadas: {updated_actions}")
 
     def load_references(self, references_data_list):
@@ -718,11 +718,11 @@ class ReferenceManagerWidget(QWidget):
             # Para identificação na lista, o nome da sequência é suficiente.
             # A lógica de `_handle_configure_actions` precisará encontrar `ref_data` por nome/índice.
             user_data_payload = name  # Usar o nome da sequência como identificador no UserRole
-        
+
         elif ref_type == 'static':
             display_text = name  # O nome já inclui a extensão .png, etc.
             user_data_payload = ref_data.get('path')  # Para estático, o caminho é um bom UserRole
-        
+
         else:  # Tipo desconhecido, apenas mostrar o nome
             display_text = f"[Desconhecido] {name}"
             user_data_payload = name
@@ -739,12 +739,12 @@ class ReferenceManagerWidget(QWidget):
                     action_descriptions.append(self.main_controller.get_action_description(action))
             else:  # Fallback se o controller ou método não estiver disponível
                 action_descriptions = [f"{a.get('integration', '')}: {a.get('action_type', '')}" for a in actions]
-            
+
             tooltip_text = f"{display_text}\nAções:\n- " + "\n- ".join(action_descriptions)
             item.setToolTip(tooltip_text)
         else:
             item.setToolTip(display_text)
-            
+
         self.reference_list_widget.addItem(item)
 
     def get_selected_reference_data(self):
@@ -793,7 +793,7 @@ class ReferenceManagerWidget(QWidget):
                 "A criação da sequência de referência foi cancelada.",
             )
             return
-        
+
         # Sanitizar o nome da sequência também
         sequence_name = re.sub(r'[^a-zA-Z0-9_\\-]', '_', sequence_name.strip())
         if not sequence_name:
@@ -852,14 +852,14 @@ class ReferenceManagerWidget(QWidget):
         # Por agora, vamos extrair um número limitado de frames, por exemplo, a cada 10 frames, até um máximo de 50.
         # Ou, podemos pegar X frames no total, espaçados uniformemente.
         # Exemplo: pegar no máximo 20 frames, espaçados.
-        
+
         max_frames_to_extract = 20
         desired_interval = 1  # Extrair todos os frames se <= max_frames_to_extract
         if frame_count_total > max_frames_to_extract:
             desired_interval = frame_count_total // max_frames_to_extract
             if desired_interval == 0:
                 desired_interval = 1  # Evitar divisão por zero se for um vídeo muito curto
-        
+
         extracted_count = 0
         current_frame_idx = 0
 
@@ -872,7 +872,7 @@ class ReferenceManagerWidget(QWidget):
             if current_frame_idx % desired_interval == 0:
                 frame_filename = f"{sequence_base_name}_frame_{extracted_count:03d}.png"
                 frame_filepath = os.path.join(self.references_dir, frame_filename)
-                
+
                 # Lógica para evitar sobrescrever se já existir um arquivo com esse nome exato
                 # (embora o sequence_base_name já deva ser único)
                 temp_frame_count = 0
@@ -890,11 +890,11 @@ class ReferenceManagerWidget(QWidget):
                     # REMOVIDO: print(f"Falha ao salvar frame {frame_filepath} para sequência {sequence_base_name}")
                     # Poderia adicionar um QMessageBox.warning aqui se muitas falhas ocorrerem
                     pass
-            
+
             current_frame_idx += 1
-        
+
         cap.release()
-        
+
         if not frame_paths:
             msg_none = (
                 f"Nenhum frame foi extraído de {video_path}. Verifique o arquivo."
@@ -910,52 +910,52 @@ class ReferenceManagerWidget(QWidget):
                     "Esperava-se mais, verifique o vídeo."
                 )
                 QMessageBox.information(self, "Extração Parcial", msg_partial)
-            
+
         return frame_paths
 
     def _capture_ndi_frame(self, ndi_source_data):
         """Captura um frame da fonte NDI especificada."""
         try:
             source_name = ndi_source_data.get('ndi_name', 'Fonte Desconhecida')
-            
+
             # Inicializar NDI
             if not NDI.initialize():
                 print("Erro: NDI não pode ser inicializado")
                 return None
-            
+
             # Descobrir fontes NDI novamente para obter o objeto correto
             ndi_find = NDI.find_create_v2()
             if not ndi_find:
                 print("Erro: Não foi possível criar NDI finder")
                 NDI.destroy()
                 return None
-            
+
             # Aguardar descoberta
             import time
             time.sleep(1)
-            
+
             # Obter fontes
             sources = NDI.find_get_current_sources(ndi_find)
             target_source = None
-            
+
             for source in sources:
                 if source.ndi_name == source_name:
                     target_source = source
                     break
-            
+
             NDI.find_destroy(ndi_find)
-            
+
             if not target_source:
                 NDI.destroy()
                 return None
-            
+
             # Criar configuração do receiver
             recv_create = NDI.RecvCreateV3()
             recv_create.source_to_connect_to = target_source
             recv_create.color_format = NDI.RECV_COLOR_FORMAT_BGRX_BGRA
             recv_create.bandwidth = NDI.RECV_BANDWIDTH_HIGHEST
             recv_create.allow_video_fields = True
-            
+
             # Criar receiver para a fonte NDI
             ndi_recv = NDI.recv_create_v3(recv_create)
             if not ndi_recv:
@@ -1069,3 +1069,4 @@ class ReferenceManagerWidget(QWidget):
 # REMOVIDO: widget.setGeometry(100, 100, 400, 600)
 # REMOVIDO: widget.show()
 # REMOVIDO: sys.exit(app.exec_())
+
