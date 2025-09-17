@@ -133,8 +133,8 @@ def draw_logo(size: int = 512) -> Image.Image:
             dt.text((x, y), s_text, font=font, fill=TEXT,
                     stroke_width=max(1, W // 140), stroke_fill=(0, 0, 0, 90))
         except TypeError:
-            for dx, dy in ((1,0),(-1,0),(0,1),(0,-1)):
-                dt.text((x+dx, y+dy), s_text, font=font, fill=(0,0,0,120))
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                dt.text((x + dx, y + dy), s_text, font=font, fill=(0, 0, 0, 120))
             dt.text((x, y), s_text, font=font, fill=TEXT)
 
         base.alpha_composite(shadow)

@@ -25,7 +25,7 @@ class VMixConfigWidget(QWidget):
 
         form_layout = QFormLayout(config_frame)
         form_layout.setSpacing(10)
-        form_layout.setLabelAlignment(Qt.AlignRight) # Alinha labels à direita
+        form_layout.setLabelAlignment(Qt.AlignRight)  # Alinha labels à direita
 
         self.host_input = QLineEdit("localhost")
         self.host_input.setPlaceholderText("Ex: 127.0.0.1 ou vmix_pc")
