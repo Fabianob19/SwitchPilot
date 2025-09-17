@@ -7,7 +7,6 @@ venv/
 # Ignorar arquivos de build do PyInstaller
 build/
 dist/
-*.spec
 
 # Ignorar arquivos grandes e binários
 *.exe
