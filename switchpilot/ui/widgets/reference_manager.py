@@ -962,20 +962,17 @@ class ReferenceManagerWidget(QWidget):
                 print("Erro: Não foi possível criar NDI receiver")
                 NDI.destroy()
                 return None
-            
             # Aguardar e capturar frame
             timeout_seconds = 25  # Aumentado para 25 segundos
             start_time = time.time()
             print(f"[DEBUG] Iniciando captura NDI, timeout: {timeout_seconds}s")
             frames_attempted = 0
-            
             while (time.time() - start_time) < timeout_seconds:
                 try:
                     # A função recv_capture_v2 retorna uma tupla
                     result = NDI.recv_capture_v2(ndi_recv, 200)  # Aumentado timeout
                     frame_type, video_frame, audio_frame, metadata_frame = result
                     frames_attempted += 1
-                    
                     if frame_type == NDI.FRAME_TYPE_VIDEO:
                         print(f"[DEBUG] Frame de vídeo recebido: {video_frame.xres}x{video_frame.yres}")
 
@@ -999,7 +996,8 @@ class ReferenceManagerWidget(QWidget):
                         )
 
                         # Converter BGRX para BGR (remover canal alpha)
-                        frame_bgr = frame_data[:, :video_frame.xres, :3].copy()  # Fazer cópia para garantir continuidade
+                        # Fazer cópia para garantir continuidade
+                        frame_bgr = frame_data[:, :video_frame.xres, :3].copy()
 
                         # Verificar se o frame resultante é válido
                         if frame_bgr.size == 0:
