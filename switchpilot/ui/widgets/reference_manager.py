@@ -1042,7 +1042,7 @@ class ReferenceManagerWidget(QWidget):
             # Aguardar para liberar recursos NDI adequadamente
             time.sleep(2)
             return None
-            
+
         except Exception as e:
             print(f"Erro ao capturar frame NDI: {e}")
             try:
