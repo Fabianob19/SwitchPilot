@@ -1,5 +1,6 @@
 # Ignorar ambientes virtuais
 .venv/
+.venv310/
 env/
 venv/
 
