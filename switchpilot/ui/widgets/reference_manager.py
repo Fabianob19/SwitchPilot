@@ -621,9 +621,15 @@ class ReferenceManagerWidget(QWidget):
                 # REMOVIDO: print(f"DEBUG: QListWidget count after adding existing: {self.reference_list_widget.count()}")
 
             except Exception as e:
-                QMessageBox.critical(self, "Erro ao Copiar Arquivo",
-                                     f"Não foi possível copiar o arquivo '{original_filename}' para '{self.references_dir}'.\nErro: {e}")
-                continue # Pular para o próximo arquivo se houver erro
+                QMessageBox.critical(
+                    self,
+                    "Erro ao Copiar Arquivo",
+                    (
+                        f"Não foi possível copiar o arquivo '{original_filename}' "
+                        f"para '{self.references_dir}'.\nErro: {e}"
+                    ),
+                )
+                continue  # Pular para o próximo arquivo se houver erro
 
         if added_count > 0:
             self.references_updated.emit(self.get_all_references_data()) # Usar getter
@@ -643,7 +649,7 @@ class ReferenceManagerWidget(QWidget):
         if reply == QMessageBox.Yes:
             row = self.reference_list_widget.row(current_item)
             self.reference_list_widget.takeItem(row)
-            removed_ref_data = self.references_data.pop(row)
+            self.references_data.pop(row)
 
             # Opcional: remover o arquivo físico (MANTIDO COMENTADO POR PADRÃO)
             # try:
@@ -685,9 +691,16 @@ class ReferenceManagerWidget(QWidget):
             )
             QMessageBox.warning(self, "Erro", msg)
             return
- 
+
         if not self.main_controller:
-            QMessageBox.critical(self, "Erro Crítico", "MainController não está disponível no ReferenceManagerWidget. Não é possível abrir o diálogo de ações.")
+            QMessageBox.critical(
+                self,
+                "Erro Crítico",
+                (
+                    "MainController não está disponível no ReferenceManagerWidget. "
+                    "Não é possível abrir o diálogo de ações."
+                ),
+            )
             return
 
         dialog = ActionConfigDialog(selected_ref_data, self.main_controller, self)
