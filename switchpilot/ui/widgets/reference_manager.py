@@ -610,7 +610,7 @@ class ReferenceManagerWidget(QWidget):
                 count += 1
 
             try:
-                shutil.copy2(original_filepath, target_filepath) # copy2 preserva metadados
+                shutil.copy2(original_filepath, target_filepath)  # copy2 preserva metadados
 
                 new_ref_data = {'name': final_display_name, 'type': 'static', 'path': target_filepath, 'actions': []}
                 self.references_data.append(new_ref_data)
@@ -618,7 +618,8 @@ class ReferenceManagerWidget(QWidget):
                 self._display_reference_in_list(new_ref_data)
                 self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
                 added_count += 1
-                # REMOVIDO: print(f"DEBUG: QListWidget count after adding existing: {self.reference_list_widget.count()}")
+                # REMOVIDO: print(f"DEBUG: QListWidget count after adding existing:")
+                # REMOVIDO: print(self.reference_list_widget.count())
 
             except Exception as e:
                 QMessageBox.critical(
@@ -632,9 +633,12 @@ class ReferenceManagerWidget(QWidget):
                 continue  # Pular para o próximo arquivo se houver erro
 
         if added_count > 0:
-            self.references_updated.emit(self.get_all_references_data()) # Usar getter
-            QMessageBox.information(self, "Referências Adicionadas",
-                                  f"{added_count} imagem(ns) de referência adicionada(s) com sucesso.")
+            self.references_updated.emit(self.get_all_references_data())  # Usar getter
+            QMessageBox.information(
+                self,
+                "Referências Adicionadas",
+                f"{added_count} imagem(ns) de referência adicionada(s) com sucesso.",
+            )
 
     def _handle_remove_reference(self):
         current_item = self.reference_list_widget.currentItem()
