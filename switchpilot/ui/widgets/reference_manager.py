@@ -652,9 +652,16 @@ class ReferenceManagerWidget(QWidget):
             #         # print(f"Arquivo removido: {removed_ref_data['path']}") # Log de debug se descomentado
             # except Exception as e:
             #     # print(f"Erro ao remover arquivo {removed_ref_data['path']}: {e}") # Log de debug se descomentado
-            #     QMessageBox.warning(self, "Erro ao Remover Arquivo", f"Não foi possível remover o arquivo físico {removed_ref_data['path']}. Verifique as permissões.")
+            #     QMessageBox.warning(
+            #         self,
+            #         "Erro ao Remover Arquivo",
+            #         (
+            #             f"Não foi possível remover o arquivo físico {removed_ref_data['path']}. "
+            #             "Verifique as permissões."
+            #         ),
+            #     )
 
-            self.references_updated.emit(self.get_all_references_data()) # Usar getter
+            self.references_updated.emit(self.get_all_references_data())  # Usar getter
             # REMOVIDO: print(f"Referência removida: {removed_ref_data}")
 
     def _handle_configure_actions(self):
@@ -678,8 +685,7 @@ class ReferenceManagerWidget(QWidget):
             )
             QMessageBox.warning(self, "Erro", msg)
             return
-
-
+ 
         if not self.main_controller:
             QMessageBox.critical(self, "Erro Crítico", "MainController não está disponível no ReferenceManagerWidget. Não é possível abrir o diálogo de ações.")
             return
