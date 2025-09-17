@@ -1,0 +1,17 @@
+﻿SwitchPilot v1.5.0-beta1
+
+Como usar:
+1) Dê duplo clique em SwitchPilot.exe.
+2) Em Configurações OBS/vMix, ajuste host/porta se necessário.
+3) Em Gerenciador de Referências: escolha a fonte (Monitor/Janela), clique em 'Selecionar Região PGM' e selecione a área.
+4) Adicione imagens de referência e ações; inicie o monitoramento.
+
+Requisitos:
+- Windows 10/11, OBS WebSocket 5.x (se usar OBS) e vMix API ativa (se usar vMix).
+
+Observações:
+- NDI é opcional e não precisa estar instalado para rodar.
+- Se estiver com escala de exibição 125%/150%, o app já é DPI-aware.
+
+Suporte rápido:
+- Em caso de erro, abra o app e copie os logs da aba de Log.

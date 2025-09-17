@@ -1,51 +1,67 @@
 # SwitchPilot
 
-Painel de automação para corte de câmeras em transmissões ao vivo, com integração ao vMix e OBS. Interface moderna, responsiva e personalizável.
+Automação de corte de cenas para lives (OBS/vMix), com captura de tela/janela, comparação de imagem rápida (Hist+NCC+LBP) e execução de ações. Interface PyQt5 com tema escuro, título custom e suporte a DPI alto.
 
-## Funcionalidades
-- Seleção de fonte de captura (monitor, janela; NDI opcional)
-- Seleção visual da região do PGM
-- Associação de imagens de referência a ações automáticas (corte, overlay, transição, cenas OBS, etc)
-- Log detalhado e exportação de configurações
-- Temas claros e escuros; título custom escuro no Windows
-- Diagnóstico de conexão com vMix e OBS
+## Visão Geral
+- **Fontes**: Monitor, Janela (NDI opcional)
+- **Detecção**: Ensemble Histogram Correlation + NCC + LBP, com suavização temporal
+- **Ações**: OBS (WebSocket 5.x), vMix (API HTTP)
+- **UI**: Título custom escuro, menubar integrada, seleção de ROI com prévia nítida
+- **Windows**: AppUserModelID, ícone próprio, DPI-aware (Per-Monitor v2)
 
-## Requisitos
-- Python 3.10+
+## Quickstart (Usuário Final)
+1. Baixe o ZIP de release e extraia.
+2. Abra `SwitchPilot.exe`.
+3. Configure OBS/vMix (se usar) nas abas correspondentes.
+4. Em Gerenciador de Referências: escolha a fonte (Monitor/Janela) e clique em "Selecionar Região PGM".
+5. Adicione imagens de referência e associe ações. Inicie o monitoramento.
+
+Requisitos:
 - Windows 10/11
-- Dependências: ver `requirements.txt`
+- Para OBS: WebSocket 5.x ativado
+- Para vMix: API HTTP ativa
+- NDI é opcional
 
-## Instalação (dev)
-1. Crie e ative um ambiente virtual:
-   ```
-   python -m venv .venv310
-   .venv310\Scripts\activate
-   ```
-2. Instale as dependências:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Execute o app:
-   ```
-   python main.py
-   ```
+## Desenvolvimento
+- Python 3.10+
+- Ambiente virtual recomendado
 
-## Release Beta
-- Versão atual: `v1.5.0-beta1`
-- Para gerar um executável (opcional):
-  ```
-  pip install pyinstaller
-  pyinstaller SwitchPilot.spec
-  ```
-  O executável será criado em `dist/`.
+Instalação (dev):
+```
+python -m venv .venv310
+.venv310\Scripts\activate
+pip install -r requirements.txt
+python main.py
+```
 
-## Observações
-- NDI é opcional (dependência comentada em `requirements.txt`).
-- Para vMix, mantenha a API HTTP ativada (porta 8088).
-- Para OBS, ative o WebSocket (porta 4455).
+## Arquitetura
+- Núcleo: `switchpilot/core/` (MainController, MonitorThread)
+- Integrações: `switchpilot/integrations/` (OBS, vMix, NDI opcional)
+- UI: `switchpilot/ui/` (MainWindow, widgets, temas)
 
-## Suporte
-Dúvidas, sugestões ou bugs: suporte@seudominio.com
+Diagrama (alto nível):
+```mermaid
+flowchart LR
+  A[Captura (Monitor/Janela/NDI)] --> B[Pré-processamento ROI]
+  B --> C[Similaridade (Hist + NCC + LBP)]
+  C -->|match| D[Decisão temporal (K/M/histerese)]
+  D -->|true| E[Executores (OBS/vMix)]
+  D -->|false| F[Loop próximo frame]
+  subgraph UI
+    U1[MainWindow] -- configura --> U2[ReferenceManager]
+    U1 -- monitora --> U3[Log]
+  end
+  U2 -- ROI/source --> A
+  E --> U3
+```
 
----
-© 2024–2025 SwitchPilot. Todos os direitos reservados. 
+Detalhes adicionais em `docs/arquitetura.md`.
+
+## Licença
+MIT. Veja `LICENSE`.
+
+## Contribuindo
+Veja `CONTRIBUTING.md` e `CODE_OF_CONDUCT.md`.
+
+## Segurança
+Reporte vulnerabilidades conforme `SECURITY.md`. 
