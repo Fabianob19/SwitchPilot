@@ -941,41 +941,43 @@ class ReferenceManagerWidget(QWidget):
                     
                     if frame_type == NDI.FRAME_TYPE_VIDEO:
                         print(f"[DEBUG] Frame de vídeo recebido: {video_frame.xres}x{video_frame.yres}")
-                        
+
                         # Verificar se os dados do frame são válidos
                         if video_frame.data is None or len(video_frame.data) == 0:
-                            print(f"[DEBUG] Frame sem dados, continuando...")
+                            print("[DEBUG] Frame sem dados, continuando...")
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
-                        
+
                         # Converter frame NDI para numpy array
                         frame_data = np.frombuffer(video_frame.data, dtype=np.uint8)
-                        
+
                         # Verificar se o tamanho dos dados é consistente
                         expected_size = video_frame.yres * video_frame.line_stride_in_bytes
                         if len(frame_data) < expected_size:
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
-                        
-                        frame_data = frame_data.reshape((video_frame.yres, video_frame.line_stride_in_bytes // 4, 4))
-                        
+
+                        frame_data = frame_data.reshape(
+                            (video_frame.yres, video_frame.line_stride_in_bytes // 4, 4)
+                        )
+
                         # Converter BGRX para BGR (remover canal alpha)
                         frame_bgr = frame_data[:, :video_frame.xres, :3].copy()  # Fazer cópia para garantir continuidade
-                        
+
                         # Verificar se o frame resultante é válido
                         if frame_bgr.size == 0:
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
-                        
+
                         print(f"[DEBUG] Frame NDI capturado com sucesso: {frame_bgr.shape}")
-                        
+
                         # Liberar o frame
                         NDI.recv_free_video_v2(ndi_recv, video_frame)
-                        
+
                         # Limpar recursos
                         NDI.recv_destroy(ndi_recv)
                         NDI.destroy()
-                        
+
                         return frame_bgr
                     
                     elif frame_type == NDI.FRAME_TYPE_AUDIO:
