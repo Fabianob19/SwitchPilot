@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QListWidget, QFrame, QSizePolicy, QComboBox, QFormLayout, QSpacerItem, QMessageBox, QListWidgetItem, QInputDialog, QFileDialog, QDialog, QMenu, QAction)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-import pyautogui # Adicionada importação
-import mss # Adicionada importação
-import cv2 # Adicionada importação
-import numpy as np # Adicionada importação
-import os # Adicionada importação
+import pyautogui  # Adicionada importação
+import mss  # Adicionada importação
+import cv2  # Adicionada importação
+import numpy as np  # Adicionada importação
+import os  # Adicionada importação
 import re # Para sanitizar nomes de arquivo
 import shutil # Adicionada importação para cópia de arquivos
 # import NDIlib as NDI # Adicionada importação para NDI
@@ -39,9 +39,9 @@ class ReferenceManagerWidget(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5) # Margens menores para docks
 
-        # --- Seção de Ações Globais --- 
-        actions_group = QFrame(self) # Usando QFrame para agrupar visualmente
-        actions_group.setObjectName("actionsGroupFrame") # Para estilização específica se necessário
+        # --- Seção de Ações Globais ---
+        actions_group = QFrame(self)  # Usando QFrame para agrupar visualmente
+        actions_group.setObjectName("actionsGroupFrame")  # Para estilização específica se necessário
         # actions_group.setFrameShape(QFrame.StyledPanel) # Estilo do painel via QSS
         actions_layout = QVBoxLayout(actions_group)
         actions_layout.setSpacing(10)
@@ -56,7 +56,7 @@ class ReferenceManagerWidget(QWidget):
         if NDI_AVAILABLE:
             self.source_type_combo.addItems(["Monitor", "Janela", "NDI"])
         else:
-            self.source_type_combo.addItems(["Monitor", "Janela"]) 
+            self.source_type_combo.addItems(["Monitor", "Janela"])
         source_capture_layout.addRow(self.source_type_label, self.source_type_combo)
 
         # --- Combo para seleção de monitor específico ---
@@ -77,7 +77,7 @@ class ReferenceManagerWidget(QWidget):
         source_capture_layout.addRow(self.monitor_list_label, self.monitor_field_container)
 
         self.window_list_label = QLabel("Janela Específica:")
-        self.window_list_combo = QComboBox() # Usaremos ComboBox para janelas por ser mais compacto
+        self.window_list_combo = QComboBox()  # Usaremos ComboBox para janelas por ser mais compacto
         self.window_list_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.btn_refresh_windows = QPushButton("Atualizar")
         self.btn_refresh_windows.setToolTip("Recarrega a lista de janelas visíveis")
@@ -88,8 +88,8 @@ class ReferenceManagerWidget(QWidget):
         _win_layout.setSpacing(6)
         _win_layout.addWidget(self.window_list_combo, 1)
         _win_layout.addWidget(self.btn_refresh_windows, 0)
-        self.window_list_label.setVisible(False) # Inicialmente oculto
-        self.window_field_container.setVisible(False) # Inicialmente oculto
+        self.window_list_label.setVisible(False)  # Inicialmente oculto
+        self.window_field_container.setVisible(False)  # Inicialmente oculto
         source_capture_layout.addRow(self.window_list_label, self.window_field_container)
 
         # --- Combo para seleção de fonte NDI ---
@@ -105,8 +105,8 @@ class ReferenceManagerWidget(QWidget):
         _ndi_layout.setSpacing(6)
         _ndi_layout.addWidget(self.ndi_list_combo, 1)
         _ndi_layout.addWidget(self.btn_refresh_ndi, 0)
-        self.ndi_list_label.setVisible(False) # Inicialmente oculto
-        self.ndi_field_container.setVisible(False) # Inicialmente oculto
+        self.ndi_list_label.setVisible(False)  # Inicialmente oculto
+        self.ndi_field_container.setVisible(False)  # Inicialmente oculto
         # Só adicionar ao layout se NDI estiver disponível
         if NDI_AVAILABLE:
             source_capture_layout.addRow(self.ndi_list_label, self.ndi_field_container)
@@ -150,13 +150,13 @@ class ReferenceManagerWidget(QWidget):
         # --- Seção da Lista de Referências (Simplificada) ---
         list_label = QLabel("Imagens de Referência Atuais:")
         list_label.setProperty("heading", True)
-        main_layout.addWidget(list_label) # Adicionado diretamente ao main_layout
+        main_layout.addWidget(list_label)  # Adicionado diretamente ao main_layout
 
         self.reference_list_widget = QListWidget()
         self.reference_list_widget.setAlternatingRowColors(True)
-        self.reference_list_widget.setMinimumHeight(150) # Manter para garantir algum espaço inicial
+        self.reference_list_widget.setMinimumHeight(150)  # Manter para garantir algum espaço inicial
         self.reference_list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(self.reference_list_widget, 1) # Adicionado diretamente ao main_layout com stretch
+        main_layout.addWidget(self.reference_list_widget, 1)  # Adicionado diretamente ao main_layout com stretch
         
         list_actions_layout = QHBoxLayout()
         self.configure_actions_button = QPushButton("Configurar Ações da Selecionada")
@@ -166,10 +166,10 @@ class ReferenceManagerWidget(QWidget):
 
         list_actions_layout.addWidget(self.configure_actions_button)
         list_actions_layout.addWidget(self.remove_reference_button)
-        main_layout.addLayout(list_actions_layout) # Adicionado diretamente ao main_layout
+        main_layout.addLayout(list_actions_layout)  # Adicionado diretamente ao main_layout
 
-        # main_layout.addWidget(list_group) # Comentado/Removido pois list_group foi removido
-        main_layout.addStretch(1) # Manter stretch global para empurrar esta seção para cima, se necessário
+        # main_layout.addWidget(list_group)  # Comentado/Removido pois list_group foi removido
+        main_layout.addStretch(1)  # Manter stretch global para empurrar esta seção para cima, se necessário
 
         # Conectar sinais
         self.source_type_combo.currentIndexChanged.connect(self._on_source_type_changed)
@@ -248,7 +248,7 @@ class ReferenceManagerWidget(QWidget):
                 # Adicionando uma verificação extra
                 print(f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, width={window_obj.width}, height={window_obj.height}")
                 
-                if window_obj.left is None or window_obj.top is None or window_obj.width is None or window_obj.height is None :
+                if window_obj.left is None or window_obj.top is None or window_obj.width is None or window_obj.height is None:
                     QMessageBox.warning(self, "Seleção de Janela", f"Não foi possível obter as coordenadas da janela '{window_obj.title}'. Tente trazê-la para frente.")
                     return
 
@@ -261,7 +261,7 @@ class ReferenceManagerWidget(QWidget):
                 print(f"[DEBUG] Screenshot da janela capturado: {img_to_show.shape}")
                 
                 capture_source_name = f"Janela: {window_obj.title}"
-                source_id = window_obj # Ou window_obj._hWnd se precisarmos de um ID simples e tiver no objeto
+                source_id = window_obj  # Ou window_obj._hWnd se precisarmos de um ID simples e tiver no objeto
                 source_kind = 'window'
                 
             elif source_type == "NDI":
@@ -338,13 +338,13 @@ class ReferenceManagerWidget(QWidget):
                 except Exception as cv_error:
                     try:
                         cv2.destroyAllWindows()
-                    except:
+                    except Exception:
                         pass
                     
                     QMessageBox.critical(self, "Erro OpenCV", f"Erro ao selecionar região: {cv_error}")
                     return
 
-                if roi and roi[2] > 0 and roi[3] > 0: # roi = (x, y, w, h)
+                if roi and roi[2] > 0 and roi[3] > 0:  # roi = (x, y, w, h)
                     self.selected_pgm_details = {
                         'kind': source_kind,
                         'id': source_id,
@@ -355,7 +355,7 @@ class ReferenceManagerWidget(QWidget):
                     self.pgm_region_label.setStyleSheet("color: #a3be8c;")
                     # REMOVIDO: print(f"Região PGM selecionada: {self.selected_pgm_details}")
 
-                    # --- Adicionar automaticamente a primeira referência --- 
+                    # --- Adicionar automaticamente a primeira referência ---
                     first_ref_image = img_to_show[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
                     
                     if first_ref_image.size == 0:
@@ -372,15 +372,15 @@ class ReferenceManagerWidget(QWidget):
                                 break
                             temp_idx += 1
 
-                        text, ok = QInputDialog.getText(self, "Nome da Referência", 
-                                                        "Digite o nome para a imagem de referência (sem extensão):", 
+                        text, ok = QInputDialog.getText(self, "Nome da Referência",
+                                                        "Digite o nome para a imagem de referência (sem extensão):",
                                                         text=suggested_base_name)
                         
                         if ok and text:
                             # Sanitizar o nome do arquivo
-                            base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip()) # Permitir pontos para extensões futuras, mas vamos adicionar .png
-                            if not base_filename: # Se o nome se tornar vazio após sanitização
-                                base_filename = suggested_base_name # Usar o padrão
+                            base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip())  # Permitir pontos para extensões futuras, mas vamos adicionar .png
+                            if not base_filename:  # Se o nome se tornar vazio após sanitização
+                                base_filename = suggested_base_name  # Usar o padrão
 
                             # Adicionar extensão .png se não estiver lá (ou forçar para consistência)
                             if base_filename.lower().endswith('.png'):
@@ -401,19 +401,19 @@ class ReferenceManagerWidget(QWidget):
                                 
                                 self._display_reference_in_list(new_ref_data)
                                 self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
-                                self.references_updated.emit(self.get_all_references_data()) # Usar getter
+                                self.references_updated.emit(self.get_all_references_data())  # Usar getter
                                 QMessageBox.information(self, "Referência Salva", f"Referência '{final_filename}' salva com sucesso.")
                             else:
                                 QMessageBox.critical(self, "Erro ao Salvar", f"Não foi possível salvar a imagem de referência em {filepath}")
-                        elif ok and not text: # Usuário clicou OK mas deixou o nome vazio
-                             QMessageBox.warning(self, "Nome Inválido", "O nome da referência não pode ser vazio. Referência não salva.")
-                        else: # Usuário cancelou o QInputDialog
+                        elif ok and not text:  # Usuário clicou OK mas deixou o nome vazio
+                            QMessageBox.warning(self, "Nome Inválido", "O nome da referência não pode ser vazio. Referência não salva.")
+                        else:  # Usuário cancelou o QInputDialog
                             QMessageBox.information(self, "Captura Cancelada", "Seleção de região PGM mantida, mas a referência não foi salva.")
                     # --- Fim da adição automática ---
                 else:
                     self.selected_pgm_details = None
                     self.pgm_region_label.setText("Região PGM: Seleção cancelada ou inválida")
-                    self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;") # Vermelho para erro/aviso
+                    self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")  # Vermelho para erro/aviso
             else:
                 QMessageBox.warning(self, "Erro de Captura", "Não foi possível capturar a imagem da fonte selecionada.")
 
@@ -560,7 +560,7 @@ class ReferenceManagerWidget(QWidget):
             print(f"Erro ao tentar listar fontes NDI: {e}")
             try:
                 NDI.destroy()
-            except:
+            except Exception:
                 pass
 
     def _on_current_item_changed(self, current, previous):

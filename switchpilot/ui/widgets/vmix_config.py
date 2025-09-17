@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QFormLayout, QLineEdit,
                              QPushButton, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy)
 from PyQt5.QtCore import pyqtSignal, Qt
 
+
 class VMixConfigWidget(QWidget):
     """Widget para configurar a conexão com o vMix."""
     config_changed = pyqtSignal(dict)
@@ -34,23 +35,23 @@ class VMixConfigWidget(QWidget):
         self.port_input = QLineEdit("8088")
         self.port_input.setPlaceholderText("Ex: 8088")
         form_layout.addRow(QLabel("Porta vMix:"), self.port_input)
-        
+
         layout.addWidget(config_frame)
 
         # --- Botões ---
         button_layout = QHBoxLayout()
-        
+
         self.test_button = QPushButton("Testar Conexão vMix")
         self.test_button.setObjectName("testVMixButton")
         self.test_button.clicked.connect(self.test_connection.emit)
-        
+
         # Centralizar o botão
         button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         button_layout.addWidget(self.test_button)
         button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        
+
         layout.addLayout(button_layout)
-        
+
         # Spacer para empurrar tudo para cima
         layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
@@ -76,7 +77,7 @@ class VMixConfigWidget(QWidget):
 
     def set_config(self, config):
         """Define a configuração do widget a partir de um dicionário."""
-        if isinstance(config, dict): # Verificar se config é um dicionário
+        if isinstance(config, dict):  # Verificar se config é um dicionário
             self.host_input.setText(config.get('host', 'localhost'))
             self.port_input.setText(config.get('port', '8088'))
         else:
