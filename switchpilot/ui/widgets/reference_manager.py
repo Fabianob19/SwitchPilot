@@ -688,7 +688,8 @@ class ReferenceManagerWidget(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             updated_actions = dialog.get_action_config()
             selected_ref_data['actions'] = updated_actions
-            # REMOVIDO: print(f"[RMW DEBUG] Após ActionConfigDialog, selected_ref_data['actions'] atualizado para: {selected_ref_data['actions']}")
+            # REMOVIDO: Debug Após ActionConfigDialog, actions atualizadas
+            # REMOVIDO: selected_ref_data['actions']
             # REMOVIDO: print(f"[RMW DEBUG] self.references_data COMPLETA após atualização: {self.references_data}")
             self.references_updated.emit(self.get_all_references_data())
             # REMOVIDO: print(f"Ações para '{ref_name}' atualizadas: {updated_actions}")
@@ -802,7 +803,8 @@ class ReferenceManagerWidget(QWidget):
                 "Nome Inválido",
                 "O nome da sequência não pode ser vazio após sanitização. Usando nome padrão.",
             )
-            sequence_name = sequence_name_suggestion  # Reverter para o sugerido se o usuário fornecer algo que se torna vazio
+            # Reverter para o sugerido se o usuário fornecer algo que se torna vazio
+            sequence_name = sequence_name_suggestion
 
         # Verificar novamente se o nome da sequência já existe (após sanitização do usuário)
         if any(
@@ -836,8 +838,15 @@ class ReferenceManagerWidget(QWidget):
                 f"Sequência '{sequence_name}' com {len(frame_paths)} frames adicionada com sucesso.",
             )
         else:
-            QMessageBox.warning(self, "Falha na Extração",
-                                f"Não foi possível extrair frames de '{original_filename}'. A sequência não foi adicionada.")
+            message_fail = (
+                f"Não foi possível extrair frames de '{original_filename}'. "
+                "A sequência não foi adicionada."
+            )
+            QMessageBox.warning(
+                self,
+                "Falha na Extração",
+                message_fail,
+            )
 
     def _extract_frames_from_video_gif(self, video_path, sequence_base_name):
         """Extrai frames de um vídeo/GIF e os salva na pasta de referências."""
@@ -1069,4 +1078,3 @@ class ReferenceManagerWidget(QWidget):
 # REMOVIDO: widget.setGeometry(100, 100, 400, 600)
 # REMOVIDO: widget.show()
 # REMOVIDO: sys.exit(app.exec_())
-
