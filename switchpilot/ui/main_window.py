@@ -1,20 +1,70 @@
 import sys
 import os # Adicionado para construir caminhos de tema
+import json
+import shutil
+import ctypes
+from ctypes import wintypes
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QDockWidget, QWidget, 
-                             QVBoxLayout, QLabel, QTextEdit, QMenuBar, QStatusBar, QAction, QSizePolicy, QActionGroup, QTabBar, QSystemTrayIcon, QMenu, QStyle)
-from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QColor
-from PyQt5.QtCore import Qt, QFile, QTextStream, QDir, QRect
+                             QVBoxLayout, QLabel, QTextEdit, QMenuBar, QStatusBar, QAction, QSizePolicy, QActionGroup, QTabBar, QSystemTrayIcon, QMenu, QStyle, QPushButton, QFileDialog, QMessageBox, QDialog, QDialogButtonBox)
+from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QColor, QDesktopServices
+from PyQt5.QtCore import Qt, QFile, QTextStream, QDir, QRect, QSettings, QTimer, QUrl, QPoint
 # Importar os widgets
 from switchpilot.ui.widgets.obs_config import OBSConfigWidget
 from switchpilot.ui.widgets.vmix_config import VMixConfigWidget
 from switchpilot.ui.widgets.reference_manager import ReferenceManagerWidget
 from switchpilot.ui.widgets.monitoring_control_widget import MonitoringControlWidget
 from switchpilot.ui.widgets.threshold_config_dialog import ThresholdConfigDialog
+from switchpilot.ui.themes import THEME_LIGHT, THEME_DARK_DEFAULT, THEME_VERY_DARK
+from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
 
-# Constantes para nomes de tema (para evitar strings mágicas)
-THEME_LIGHT = "Claro"
-THEME_DARK_DEFAULT = "Escuro (Padrão)"
-THEME_VERY_DARK = "Muito Escuro"
+# Configurações padrão da janela
+DEFAULT_WINDOW_WIDTH = 1200
+DEFAULT_WINDOW_HEIGHT = 700
+DEFAULT_WINDOW_X = 100
+DEFAULT_WINDOW_Y = 100
+
+# --- Utilitário: Dark Title Bar no Windows ---
+def enable_dark_title_bar_for_window(widget):
+    try:
+        if sys.platform != 'win32':
+            return
+        hwnd = int(widget.winId())
+        # Tentar preferências de app escuras via uxtheme (não documentado, mas comum)
+        try:
+            uxtheme = ctypes.WinDLL('uxtheme')
+            # SetPreferredAppMode(AllowDark=1)
+            try:
+                SetPreferredAppMode = uxtheme.SetPreferredAppMode
+                SetPreferredAppMode.argtypes = [ctypes.c_int]
+                SetPreferredAppMode.restype = ctypes.c_int
+                SetPreferredAppMode(1)
+            except Exception:
+                pass
+            # AllowDarkModeForWindow(hwnd, TRUE)
+            try:
+                from ctypes import wintypes as _wt
+                AllowDarkModeForWindow = uxtheme.AllowDarkModeForWindow
+                AllowDarkModeForWindow.argtypes = [_wt.HWND, _wt.BOOL]
+                AllowDarkModeForWindow.restype = _wt.BOOL
+                AllowDarkModeForWindow(hwnd, True)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        # DWM attribute (Win10 1809+/Win11)
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        value = ctypes.c_int(1)
+        dwmapi = ctypes.WinDLL('dwmapi')
+        DwmSetWindowAttribute = dwmapi.DwmSetWindowAttribute
+        DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, wintypes.LPCVOID, wintypes.DWORD]
+        DwmSetWindowAttribute.restype = wintypes.HRESULT
+        hr = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
+        if hr != 0:
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 19
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
+    except Exception:
+        # Silencioso: se falhar, apenas ignora (sem crash)
+        pass
 
 def resource_path(relative_path):
     """Retorna o caminho absoluto para recursos, compatível com PyInstaller."""
@@ -66,19 +116,92 @@ class CaptureAreaOverlay(QWidget):
         painter.drawRect(0, 0, self.width()-1, self.height()-1)
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, version=None):
         super().__init__()
-        self.setWindowTitle("SwitchPilot")
-        self.setGeometry(100, 100, 1024, 768)
+        self._version = version or ""
+        title = "SwitchPilot"
+        if self._version:
+            title += f" - {self._version}"
+        self.setWindowTitle(title)
+        
+        # Carregar configurações da janela
+        self._load_window_settings()
+        
         self.setWindowIcon(QIcon(resource_path('ICONE.ico'))) # Ícone da Janela
 
         self._is_quitting_via_tray = False # Flag para controlar o fechamento real
 
         # Carregar tema padrão inicial (ou o último salvo no futuro)
-        self.current_theme_name = THEME_DARK_DEFAULT 
+        self.current_theme_name = THEME_VERY_DARK 
         self._apply_theme_qss(self.current_theme_name)
         self._setup_ui()
         self._create_tray_icon() # Configurar o ícone da bandeja
+        
+        # Ativar barra de título escura (Windows 10/11)
+        enable_dark_title_bar_for_window(self)
+
+    def _load_window_settings(self):
+        """Carrega as configurações salvas da janela ou usa valores padrão"""
+        try:
+            config_path = "switchpilot_config.json"
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    
+                window_config = config.get('window_settings', {})
+                x = window_config.get('x', DEFAULT_WINDOW_X)
+                y = window_config.get('y', DEFAULT_WINDOW_Y)
+                width = window_config.get('width', DEFAULT_WINDOW_WIDTH)
+                height = window_config.get('height', DEFAULT_WINDOW_HEIGHT)
+                
+                # Validar valores para evitar janela fora da tela
+                if width < 400:
+                    width = DEFAULT_WINDOW_WIDTH
+                if height < 300:
+                    height = DEFAULT_WINDOW_HEIGHT
+                if x < 0:
+                    x = DEFAULT_WINDOW_X
+                if y < 0:
+                    y = DEFAULT_WINDOW_Y
+                    
+                self.setGeometry(x, y, width, height)
+                print(f"Configurações da janela carregadas: {width}x{height} na posição ({x}, {y})")
+            else:
+                # Primeira execução - usar tamanho otimizado
+                self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+                print(f"Primeira execução - usando tamanho padrão: {DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}")
+        except Exception as e:
+            print(f"Erro ao carregar configurações da janela: {e}")
+            # Fallback para tamanho padrão
+            self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+
+    def _save_window_settings(self):
+        """Salva as configurações atuais da janela"""
+        try:
+            config_path = "switchpilot_config.json"
+            config = {}
+            
+            # Carregar configurações existentes
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            
+            # Atualizar configurações da janela
+            geometry = self.geometry()
+            config['window_settings'] = {
+                'x': geometry.x(),
+                'y': geometry.y(),
+                'width': geometry.width(),
+                'height': geometry.height()
+            }
+            
+            # Salvar de volta
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+                
+            print(f"Configurações da janela salvas: {geometry.width()}x{geometry.height()} na posição ({geometry.x()}, {geometry.y()})")
+        except Exception as e:
+            print(f"Erro ao salvar configurações da janela: {e}")
 
     def _create_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -148,6 +271,9 @@ class MainWindow(QMainWindow):
                     print("Parando monitoramento antes de sair...")
                     self.main_controller.stop_monitoring_if_running()
             
+            # Salvar configurações da janela antes de sair
+            self._save_window_settings()
+            
             # Salvar configurações, etc.
             print("Saindo da aplicação...")
             super().closeEvent(event)
@@ -156,15 +282,39 @@ class MainWindow(QMainWindow):
             event.ignore()
             self._toggle_visibility() # Reutiliza a lógica de minimizar e mostrar mensagem
 
+    def resizeEvent(self, event):
+        """Salva configurações da janela quando redimensionada"""
+        super().resizeEvent(event)
+        # Salvar configurações após redimensionar (com pequeno delay para evitar muitas escritas)
+        if hasattr(self, '_resize_timer'):
+            self._resize_timer.stop()
+        else:
+            self._resize_timer = QTimer()
+            self._resize_timer.setSingleShot(True)
+            self._resize_timer.timeout.connect(self._save_window_settings)
+        self._resize_timer.start(1000)  # Salva após 1 segundo de inatividade
+
+    def moveEvent(self, event):
+        """Salva configurações da janela quando movida"""
+        super().moveEvent(event)
+        # Salvar configurações após mover (com pequeno delay para evitar muitas escritas)
+        if hasattr(self, '_move_timer'):
+            self._move_timer.stop()
+        else:
+            self._move_timer = QTimer()
+            self._move_timer.setSingleShot(True)
+            self._move_timer.timeout.connect(self._save_window_settings)
+        self._move_timer.start(1000)  # Salva após 1 segundo de inatividade
+
     def _get_theme_path(self, theme_name):
         base_path = "switchpilot/ui/themes/"
         if theme_name == THEME_LIGHT:
-            return os.path.join(base_path, "modern_light.qss")
+            return resource_path(os.path.join(base_path, "modern_light.qss"))
         elif theme_name == THEME_VERY_DARK:
-            return os.path.join(base_path, "modern_very_dark.qss")
+            return resource_path(os.path.join(base_path, "modern_very_dark.qss"))
         elif theme_name == THEME_DARK_DEFAULT:
-            return os.path.join(base_path, "modern_dark_obs.qss")
-        return None # Ou lançar erro
+            return resource_path(os.path.join(base_path, "modern_dark_obs.qss"))
+        return None
 
     def _apply_theme_qss(self, theme_name):
         """Carrega e aplica o arquivo QSS do tema especificado."""
@@ -173,40 +323,37 @@ class MainWindow(QMainWindow):
             print(f"Erro: Nome do tema desconhecido '{theme_name}'")
             return False
 
-        file = QFile(qss_path)
-        if file.open(QFile.ReadOnly | QFile.Text):
-            stream = QTextStream(file)
-            self.setStyleSheet(stream.readAll())
-            file.close()
-            self.current_theme_name = theme_name # Atualizar tema atual
+        try:
+            with open(qss_path, 'r', encoding='utf-8') as f:
+                self.setStyleSheet(f.read())
+            self.current_theme_name = theme_name
             print(f"Tema '{theme_name}' aplicado de '{qss_path}'.")
             return True
-        else:
+        except Exception as e:
             print(f"Erro ao carregar stylesheet do tema '{theme_name}': {qss_path}")
-            print(f"Caminho absoluto tentado: {file.fileName()}")
-            print(f"Erro: {file.errorString()}")
+            print(f"Exceção: {e}")
             # Tentar recarregar o tema padrão como fallback se o tema atual falhar?
             if theme_name != THEME_DARK_DEFAULT:
                 print("Tentando carregar tema padrão como fallback...")
-                # self._apply_theme_qss(THEME_DARK_DEFAULT) # Evitar recursão infinita se o padrão também falhar
                 default_qss_path = self._get_theme_path(THEME_DARK_DEFAULT)
-                default_file = QFile(default_qss_path)
-                if default_file.open(QFile.ReadOnly | QFile.Text):
-                    stream = QTextStream(default_file)
-                    self.setStyleSheet(stream.readAll())
-                    default_file.close()
+                try:
+                    with open(default_qss_path, 'r', encoding='utf-8') as f:
+                        self.setStyleSheet(f.read())
                     self.current_theme_name = THEME_DARK_DEFAULT
                     print(f"Tema padrão '{THEME_DARK_DEFAULT}' aplicado como fallback.")
+                except Exception as e2:
+                    print(f"Erro ao carregar fallback: {e2}")
             return False
 
     def _setup_ui(self):
-        # Barra de Menu
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu("&Arquivo")
-        view_menu = menubar.addMenu("&Visualizar")
+        # Barra de Menu (custom, para integrar na barra personalizada)
+        self._custom_menubar = QMenuBar(self)
+        self._custom_menubar.setObjectName("TopMenuBar")
+        file_menu = self._custom_menubar.addMenu("&Arquivo")
+        view_menu = self._custom_menubar.addMenu("&Visualizar")
         
         # --- Menu Configurações e Aparência ---
-        settings_menu = menubar.addMenu("&Configurações")
+        settings_menu = self._custom_menubar.addMenu("&Configurações")
         appearance_menu = settings_menu.addMenu("&Aparência")
 
         # Adicionar ação para limiares
@@ -232,15 +379,59 @@ class MainWindow(QMainWindow):
         self.theme_very_dark_action = create_theme_action(THEME_VERY_DARK)
         # --- Fim Menu Configurações e Aparência ---
         
-        help_menu = menubar.addMenu("A&juda")
+        help_menu = self._custom_menubar.addMenu("A&juda")
+
+        # Itens de Arquivo
+        import_action = QAction("Importar Configurações...", self)
+        import_action.triggered.connect(self._import_config)
+        export_action = QAction("Exportar Configurações...", self)
+        export_action.triggered.connect(self._export_config)
+        open_folder_action = QAction("Abrir Pasta do Aplicativo", self)
+        open_folder_action.triggered.connect(self._open_app_folder)
+        file_menu.addAction(import_action)
+        file_menu.addAction(export_action)
+        file_menu.addAction(open_folder_action)
+        file_menu.addSeparator()
 
         exit_action = QAction("Sair", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
+        # Itens de Ajuda
+        quick_guide_action = QAction("Guia Rápido", self)
+        quick_guide_action.triggered.connect(self._show_quick_guide)
+        shortcuts_action = QAction("Atalhos de Teclado", self)
+        shortcuts_action.triggered.connect(self._show_shortcuts)
+        changelog_action = QAction("Ver Changelog", self)
+        changelog_action.triggered.connect(self._show_changelog)
+        about_action = QAction("Sobre", self)
+        about_action.triggered.connect(self._show_about)
+        help_menu.addAction(quick_guide_action)
+        help_menu.addAction(shortcuts_action)
+        help_menu.addAction(changelog_action)
+        help_menu.addSeparator()
+        help_menu.addAction(about_action)
+
         self.setStatusBar(QStatusBar(self))
         self.statusBar().showMessage("Pronto")
 
+        # Aplicar barra custom: tornar janela frameless e usar setMenuWidget
+        try:
+            self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+            # Remover menubar nativa da barra do sistema
+            self.setMenuBar(None)
+            # Container vertical com barra de título e menubar abaixo
+            container = QWidget(self)
+            v = QVBoxLayout(container)
+            v.setContentsMargins(0, 0, 0, 0)
+            v.setSpacing(0)
+            self._custom_title_bar = CustomTitleBar(self, None, height=32)
+            v.addWidget(self._custom_title_bar)
+            v.addWidget(self._custom_menubar)
+            self.setMenuWidget(container)
+        except Exception as e:
+            print(f"[WARN] Falha ao aplicar barra personalizada: {e}")
+        
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowNestedDocks | QMainWindow.AllowTabbedDocks)
 
         obs_config_dock = QDockWidget("Configuração OBS", self)
@@ -286,7 +477,7 @@ class MainWindow(QMainWindow):
                         # Se o parent_widget for um QDockWidget, significa que o QTabBar é o título do próprio dock,
                         # o que não é o que queremos aqui (já é estilizado por QDockWidget::title).
                         # O QTabBar que gerencia múltiplos docks agrupados geralmente não tem um QDockWidget como pai direto.
-                        # Ele é filho de um widget container interno da QMainWindow.
+                        # Ele é filho de um widget interno da QMainWindow.
                         # Vamos tentar uma verificação mais simples: se o parent não é um QTabWidget e
                         # se este tab_bar tem um número de abas correspondente aos docks que acabamos de agrupar (2 neste caso)
                         # e não é um QTabBar que já tem um objectName (para evitar re-nomear multiplas vezes).
@@ -346,6 +537,18 @@ class MainWindow(QMainWindow):
         self.show_capture_area_action.setChecked(False)
         self.show_capture_area_action.toggled.connect(self._toggle_capture_area_overlay)
         view_menu.addAction(self.show_capture_area_action)
+
+        # Restaurar layout padrão
+        view_menu.addSeparator()
+        self.restore_layout_action = QAction("Restaurar Layout Padrão", self)
+        self.restore_layout_action.triggered.connect(self._restore_default_layout)
+        view_menu.addAction(self.restore_layout_action)
+
+        # Salva estado inicial do layout para restauração futura
+        try:
+            self._default_dock_state = self.saveState()
+        except Exception:
+            self._default_dock_state = None
 
     def _on_theme_selected(self, theme_name):
         if self._apply_theme_qss(theme_name):
@@ -420,6 +623,139 @@ class MainWindow(QMainWindow):
                 self._capture_area_overlay.close()
                 self._capture_area_overlay = None
 
+    def _restore_default_layout(self):
+        if getattr(self, '_default_dock_state', None):
+            try:
+                self.restoreState(self._default_dock_state)
+                self.statusBar().showMessage("Layout restaurado.", 2000)
+            except Exception as e:
+                QMessageBox.warning(self, "Restaurar Layout", f"Falha ao restaurar layout: {e}")
+        else:
+            QMessageBox.information(self, "Restaurar Layout", "Estado padrão do layout não disponível nesta sessão.")
+
+    def _import_config(self):
+        src, _ = QFileDialog.getOpenFileName(self, "Importar Configurações", "", "JSON (*.json)")
+        if not src:
+            return
+        try:
+            shutil.copyfile(src, "switchpilot_config.json")
+            QMessageBox.information(self, "Importar Configurações", "Configurações importadas com sucesso. Algumas alterações podem exigir reiniciar.")
+        except Exception as e:
+            QMessageBox.critical(self, "Importar Configurações", f"Falha ao importar: {e}")
+
+    def _export_config(self):
+        dst, _ = QFileDialog.getSaveFileName(self, "Exportar Configurações", "switchpilot_config.json", "JSON (*.json)")
+        if not dst:
+            return
+        try:
+            if os.path.exists("switchpilot_config.json"):
+                shutil.copyfile("switchpilot_config.json", dst)
+            else:
+                # Se não existir, cria um mínimo com janela atual
+                geometry = self.geometry()
+                config = {
+                    'window_settings': {
+                        'x': geometry.x(), 'y': geometry.y(), 'width': geometry.width(), 'height': geometry.height()
+                    }
+                }
+                with open(dst, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, indent=2, ensure_ascii=False)
+            QMessageBox.information(self, "Exportar Configurações", "Arquivo exportado com sucesso.")
+        except Exception as e:
+            QMessageBox.critical(self, "Exportar Configurações", f"Falha ao exportar: {e}")
+
+    def _open_app_folder(self):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.abspath('.')))
+
+    def _show_quick_guide(self):
+        text = (
+            "Como funciona a detecção:\n"
+            "- S (0–1) é média ponderada de Hist, NCC e LBP.\n"
+            "- Dispara quando S ≥ Limiar.\n\n"
+            "Dicas rápidas:\n"
+            "- Aumente o limiar para mais precisão; diminua para mais sensibilidade.\n"
+            "- Intervalo menor = resposta mais rápida (maior uso de CPU).\n"
+        )
+        QMessageBox.information(self, "Guia Rápido", text)
+
+    def _show_shortcuts(self):
+        text = (
+            "Atalhos úteis:\n"
+            "- Limiar de Similaridade…: menu Configurações\n"
+            "- Exibir Área de Captura: menu Visualizar\n"
+            "- Sair: Arquivo → Sair\n"
+        )
+        QMessageBox.information(self, "Atalhos de Teclado", text)
+
+    def _show_changelog(self):
+        path = resource_path('CHANGELOG.md') if os.path.exists('CHANGELOG.md') else None
+        if not path:
+            QMessageBox.information(self, "Changelog", "Arquivo CHANGELOG.md não encontrado.")
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            # Janela simples de leitura
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Changelog")
+            dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+            enable_dark_title_bar_for_window(dlg)
+            layout = QVBoxLayout(dlg)
+            te = QTextEdit(dlg)
+            te.setReadOnly(True)
+            te.setPlainText(content)
+            layout.addWidget(te)
+            buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
+            buttons.rejected.connect(dlg.reject)
+            buttons.accepted.connect(dlg.accept)
+            layout.addWidget(buttons)
+            dlg.resize(700, 500)
+            dlg.exec_()
+        except Exception as e:
+            QMessageBox.warning(self, "Changelog", f"Falha ao abrir changelog: {e}")
+
+    def _show_about(self):
+        version = self._version or ""
+        text = f"SwitchPilot {version}\n© Seu time.\nPasta do app: {os.path.abspath('.')}"
+        QMessageBox.information(self, "Sobre", text)
+
+    def nativeEvent(self, eventType, message):
+        try:
+            if sys.platform == 'win32':
+                import ctypes
+                from ctypes import wintypes
+                msg = ctypes.wintypes.MSG.from_address(message.__int__())
+                WM_NCHITTEST = 0x0084
+                if msg.message == WM_NCHITTEST:
+                    pos = self.mapFromGlobal(QPoint(int(ctypes.c_short(msg.lParam & 0xFFFF).value), int(ctypes.c_short((msg.lParam >> 16) & 0xFFFF).value)))
+                    x, y, w, h = pos.x(), pos.y(), self.width(), self.height()
+                    margin = 6
+                    if x < margin and y < margin: return True, 13  # HTTOPLEFT
+                    if x > w - margin and y < margin: return True, 14  # HTTOPRIGHT
+                    if x < margin and y > h - margin: return True, 16  # HTBOTTOMLEFT
+                    if x > w - margin and y > h - margin: return True, 17  # HTBOTTOMRIGHT
+                    if y < margin: return True, 12  # HTTOP
+                    if y > h - margin: return True, 15  # HTBOTTOM
+                    if x < margin: return True, 10  # HTLEFT
+                    if x > w - margin: return True, 11  # HTRIGHT
+                    # Área de arrasto: barra personalizada, exceto sobre botões
+                    if hasattr(self, '_custom_title_bar') and self._custom_title_bar:
+                        bar = self._custom_title_bar
+                        top_left = bar.mapTo(self, QPoint(0, 0))
+                        bar_rect = QRect(top_left, bar.size())
+                        if bar_rect.contains(pos):
+                            local = pos - top_left
+                            try:
+                                for btn in (bar.btn_min, bar.btn_max, bar.btn_close):
+                                    if btn.geometry().contains(local):
+                                        return True, 1  # HTCLIENT
+                            except Exception:
+                                pass
+                            return True, 2  # HTCAPTION
+        except Exception:
+            pass
+        return super().nativeEvent(eventType, message)
+
 # Para teste rápido
 if __name__ == '__main__':
     app = QApplication.instance()
@@ -471,6 +807,6 @@ if __name__ == '__main__':
 
     mock_controller = MockMainController()
     main_win.set_main_controller_for_widgets(mock_controller)
-
+    
     if app is QApplication.instance() and sys.argv[0] == __file__ and not hasattr(sys, 'frozen'):
          sys.exit(app.exec_()) 

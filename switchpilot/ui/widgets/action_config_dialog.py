@@ -5,6 +5,8 @@ from PyQt5.QtCore import Qt
 class ActionConfigDialog(QDialog):
     def __init__(self, reference_data, main_controller, parent=None):
         super().__init__(parent)
+        # Remover botão de ajuda ('?') do título
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.reference_data = reference_data
         self.main_controller = main_controller
         
@@ -107,11 +109,42 @@ class ActionConfigDialog(QDialog):
             if params:
                 param_summary = []
                 if 'scene_name' in params: param_summary.append(f"'{params['scene_name']}'")
-                if 'input_name' in params: param_summary.append(f"Input: '{params['input_name']}'")
+                
+                # vMix specific summary
+                if integration == "vMix":
+                    if 'input_key' in params and params['input_key'] is not None:
+                        # Try to find the friendly name for the input_key
+                        input_name_display = f"Input Key: {params['input_key']}" # Fallback
+                        if self.main_controller and self.main_controller.vmix_controller:
+                            try:
+                                inputs = self.main_controller.vmix_controller.get_inputs_list()
+                                found_input = next((inp for inp in inputs if inp['key'] == params['input_key']), None)
+                                if found_input:
+                                    input_name_display = f"Input: {found_input['number']}: {found_input['title']}"
+                            except Exception:
+                                pass # Stick to fallback
+                        param_summary.append(input_name_display)
+                    elif 'input' in params : # Fallback for older or generic "input" param if input_key is not used/present
+                        param_summary.append(f"Input: '{params['input']}'")
+
+                    if 'mix_index' in params:
+                        mix_map = {0: "Preview", 1: "Program", 2: "Mix 2", 3: "Mix 3", 4: "Mix 4"}
+                        mix_display = mix_map.get(params['mix_index'], f"Mix {params['mix_index']}")
+                        param_summary.append(f"Para: {mix_display}")
+
+                # OBS Specific (or other integrations if added)
+                elif 'input_name' in params: param_summary.append(f"Input: '{params['input_name']}'")
+
+
                 if 'item_name' in params: param_summary.append(f"Fonte: '{params['item_name']}'")
                 if 'function_name' in params: param_summary.append(f"Func: '{params['function_name']}'")
+                # Add other vMix specific params to summary if needed
+                if 'selected_name' in params : param_summary.append(f"Campo: '{params['selected_name']}'")
+                if 'text_value' in params : param_summary.append(f"Valor: '{params['text_value'][:20]}...'")
+
+
                 if param_summary:
-                    summary_parts.append(f"({', '.join(param_summary)})")
+                    summary_parts.append(f"({' | '.join(param_summary)})") # Changed separator for clarity
             item_text = " ".join(summary_parts)
             list_item = QListWidgetItem(item_text)
             list_item.setData(Qt.UserRole, idx) 
@@ -250,10 +283,17 @@ class ActionConfigDialog(QDialog):
         self.params_frame.setVisible(False)
         self.save_current_action_button.setEnabled(False)
 
+        # DEBUG: Verificar valores recebidos
+        current_integration = self.integration_combo.currentText()
         action_name = self.action_type_combo.itemText(index)
-        if not action_name or action_name == "Nenhuma" or self.action_type_combo.currentIndex() == 0: 
+        current_action_index = self.action_type_combo.currentIndex()
+        print(f"DEBUG: _on_action_type_changed - Index: {index}, Integration: '{current_integration}', ActionName: '{action_name}', ActionIndex: {current_action_index}")
+
+        if not action_name or action_name == "Nenhuma" or action_name == "Selecione..." or current_action_index == 0: 
+            print(f"DEBUG: _on_action_type_changed - Retornando prematuramente. ActionName: '{action_name}', Index: {current_action_index}")
             return
 
+        print(f"DEBUG: _on_action_type_changed - Prosseguindo para criar layout para '{action_name}'")
         self.active_param_layout = QFormLayout()
         self.active_param_layout.setSpacing(8)
         self.current_param_widgets = {} 
@@ -302,36 +342,32 @@ class ActionConfigDialog(QDialog):
 
         elif self.integration_combo.currentText() == "vMix":
             if action_name == "Function (Genérico)":
-                function_name_edit = QLineEdit()
-                function_name_edit.setObjectName("param_function_name")
-                self._add_param_control("Nome da Função vMix:", function_name_edit, "Ex: StartStopRecording")
-                
+                input_label = QLabel("Input vMix (Opcional):")
                 input_combo = QComboBox()
-                input_combo.setObjectName("param_vmix_input") 
-                self._populate_vmix_inputs_combo(input_combo)
-                self._add_param_control("Input (Opcional):", input_combo)
+                input_combo.setObjectName("param_vmix_input")
+                self._populate_vmix_inputs_combo(input_combo, add_none_option=True)
+                self.active_param_layout.addRow(input_label, input_combo)
 
-                value_edit = QLineEdit()
-                value_edit.setObjectName("param_vmix_value") 
-                self._add_param_control("Valor (Opcional):", value_edit, "Ex: 0 ou 1 para SetFader")
-
-                duration_edit = QLineEdit() 
-                duration_edit.setObjectName("param_vmix_duration") 
-                self._add_param_control("Duração (Opcional, ms):", duration_edit, "Ex: 1000") 
-
-            elif action_name == "SetText": 
-                input_combo = QComboBox()
-                input_combo.setObjectName("param_vmix_input_for_settext")
-                self._populate_vmix_inputs_combo(input_combo)
-                self._add_param_control("Input (Título):", input_combo)
-
-                selected_name_edit = QLineEdit()
-                selected_name_edit.setObjectName("param_vmix_selected_name")
-                self._add_param_control("Nome/Índice do Campo:", selected_name_edit, "Ex: Headline ou 0")
+                self._add_param_control("Nome da Função (API)", "function_name", "Ex: StartRecording, SetText")
+                self._add_param_control("Valor (Opcional)", "vmix_value", "Ex: True, 00:05:00, Texto aqui")
+                self._add_param_control("Duração (ms, Opcional)", "vmix_duration", "Ex: 1000")
                 
-                text_value_edit = QLineEdit()
-                text_value_edit.setObjectName("param_vmix_text_value")
-                self._add_param_control("Valor do Texto:", text_value_edit)
+                mix_target_label = QLabel("Alvo do Mix (Opcional):")
+                mix_target_combo = QComboBox()
+                mix_target_combo.setObjectName("param_vmix_mix_target")
+                mix_options = ["Nenhum", "Program", "Mix 2", "Mix 3", "Mix 4"]
+                mix_target_combo.addItems(mix_options)
+                self.active_param_layout.addRow(mix_target_label, mix_target_combo)
+
+            elif action_name == "SetText":
+                input_label_st = QLabel("Input (Título/GT):")
+                input_combo_st = QComboBox()
+                input_combo_st.setObjectName("param_vmix_input_settext")
+                self._populate_vmix_inputs_combo(input_combo_st, add_none_option=False)
+                self.active_param_layout.addRow(input_label_st, input_combo_st)
+
+                self._add_param_control("Nome do Campo/Índice", "selected_name", "Ex: Headline.Text ou 0")
+                self._add_param_control("Valor do Texto", "text_value", "O texto a ser definido")
 
             elif action_name == "StartRecording" or action_name == "StopRecording": 
                 pass 
@@ -339,18 +375,40 @@ class ActionConfigDialog(QDialog):
             elif action_name == "Fade": 
                 input_combo = QComboBox()
                 input_combo.setObjectName("param_vmix_input_for_fade")
-                self._populate_vmix_inputs_combo(input_combo)
-                self._add_param_control("Input Alvo:", input_combo)
+                self._populate_vmix_inputs_combo(input_combo, add_none_option=True)
+                self._add_param_control("Input Alvo (Opcional):", input_combo)
 
                 duration_edit = QLineEdit()
                 duration_edit.setObjectName("param_vmix_duration_for_fade")
                 self._add_param_control("Duração (ms):", duration_edit, "Ex: 1000")
 
+                mix_combo = QComboBox()
+                mix_combo.setObjectName("param_mix_index")
+                mix_combo.addItem("Program (Mix 1)", 1)
+                mix_combo.addItem("Preview (Mix 0)", 0)
+                mix_combo.addItem("Mix 2", 2)
+                mix_combo.addItem("Mix 3", 3)
+                mix_combo.addItem("Mix 4", 4)
+                self._add_param_control("Enviar para Mix:", mix_combo)
+
+
             elif action_name == "Cut": 
+                print(f"DEBUG: vMix Cut action selected. Creating controls.") # DEBUG
                 input_combo = QComboBox()
                 input_combo.setObjectName("param_vmix_input_for_cut")
-                self._populate_vmix_inputs_combo(input_combo)
-                self._add_param_control("Input Alvo:", input_combo)
+                self._populate_vmix_inputs_combo(input_combo, add_none_option=True)
+                self._add_param_control("Input Alvo (Opcional):", input_combo)
+
+                print(f"DEBUG: vMix Cut - Adding mix_combo...") # DEBUG
+                mix_combo = QComboBox()
+                mix_combo.setObjectName("param_mix_index")
+                mix_combo.addItem("Program (Mix 1)", 1)
+                mix_combo.addItem("Preview (Mix 0)", 0)
+                mix_combo.addItem("Mix 2", 2)
+                mix_combo.addItem("Mix 3", 3)
+                mix_combo.addItem("Mix 4", 4)
+                self._add_param_control("Enviar para Mix:", mix_combo)
+                print(f"DEBUG: vMix Cut - mix_combo added to layout attempt.") # DEBUG
 
             elif action_name == "OverlayInputIn": 
                 overlay_channel_edit = QLineEdit()
@@ -358,8 +416,8 @@ class ActionConfigDialog(QDialog):
                 self._add_param_control("Número do Canal Overlay:", overlay_channel_edit, "Ex: 1, 2, ...")
 
                 input_combo = QComboBox()
-                input_combo.setObjectName("param_vmix_input_for_overlay") 
-                self._populate_vmix_inputs_combo(input_combo)
+                input_combo.setObjectName("param_vmix_input_for_overlay")
+                self._populate_vmix_inputs_combo(input_combo, add_none_option=False)
                 self._add_param_control("Input para Overlay:", input_combo)
             
             elif action_name == "OverlayInputOut": 
@@ -372,13 +430,16 @@ class ActionConfigDialog(QDialog):
             self.params_frame.setVisible(True)
             self.save_current_action_button.setEnabled(True)
         else:
+            # Esta parte é para ações sem parâmetros, ou se nenhum widget foi adicionado
             if action_name and action_name != "Nenhuma" and self.action_type_combo.currentIndex() > 0:
-                self.save_current_action_button.setEnabled(True)
+                # Permite salvar mesmo sem params_frame visível (ex: StartRecording)
+                self.save_current_action_button.setEnabled(True) 
             else:
                 self.save_current_action_button.setEnabled(False)
-            self.params_frame.setVisible(False)
+            self.params_frame.setVisible(False) # Oculta se não há linhas no layout ativo
 
     def _add_param_control(self, label_text, widget_or_param_key, placeholder_text_or_default_value=""):
+        print(f"DEBUG: _add_param_control called for Label: '{label_text}'") # DEBUG
         label_widget = QLabel(label_text)
         control_widget = None
         if isinstance(widget_or_param_key, QWidget): 
@@ -497,22 +558,71 @@ class ActionConfigDialog(QDialog):
                     param_key_full = control_widget.objectName() 
                     if param_key_full and param_key_full.startswith("param_"):
                         param_key_short = param_key_full[len("param_"):] 
-                        if param_key_short in params:
-                            value_to_set = params[param_key_short]
-                            if isinstance(control_widget, QLineEdit):
-                                control_widget.setText(str(value_to_set))
-                            elif isinstance(control_widget, QComboBox):
-                                if param_key_short == "visible":
-                                    text_to_select = "Visível" if str(value_to_set).lower() == "true" else "Oculto"
-                                else:
-                                    text_to_select = str(value_to_set)
+                        
+                        value_to_set = params.get(param_key_short)
+
+                        if value_to_set is None: # Se o parâmetro não existir nos dados salvos, não tenta definir
+                            if param_key_short == "mix_index" and isinstance(control_widget, QComboBox): # Default mix_index to 1 (Program)
+                                combo_idx = control_widget.findData(1)
+                                if combo_idx != -1:
+                                    control_widget.setCurrentIndex(combo_idx)
+                            continue
+
+                        if isinstance(control_widget, QLineEdit):
+                            control_widget.setText(str(value_to_set))
+                        elif isinstance(control_widget, QComboBox):
+                            # Primeiro, tentar encontrar pelo UserData (que deve ser a "key" para inputs vMix)
+                            data_idx = -1
+                            if param_key_short in ["vmix_input", "vmix_input_settext"]: # Campos que armazenam vMix input key
+                                for i in range(control_widget.count()):
+                                    if control_widget.itemData(i) == value_to_set: # value_to_set aqui é a input_key
+                                        data_idx = i
+                                        break
+                            
+                            if data_idx != -1:
+                                control_widget.setCurrentIndex(data_idx)
+                            else:
+                                # Fallback para texto, ou para campos que não usam UserData da mesma forma
+                                text_to_select = str(value_to_set) # valor padrão para texto
+                                if param_key_short == "mix_index": # Para mix_index, value_to_set é o índice numérico
+                                    mix_map_from_index = {0: "Program", 1: "Mix 2", 2: "Mix 3", 3: "Mix 4"}
+                                    text_to_select = mix_map_from_index.get(value_to_set, "Nenhum")
+                                
                                 combo_idx = control_widget.findText(text_to_select)
                                 if combo_idx != -1:
                                     control_widget.setCurrentIndex(combo_idx)
-                                else:
-                                    if control_widget.isEditable():
-                                        control_widget.setEditText(text_to_select)
-        
+                                elif param_key_short in ["vmix_input", "vmix_input_settext"] and value_to_set is None:
+                                    # Se a chave do input armazenada for None, selecionar a opção "Nenhum"
+                                    for i_text_none in range(control_widget.count()):
+                                        if control_widget.itemData(i_text_none) is None:
+                                            control_widget.setCurrentIndex(i_text_none)
+                                            break
+                        elif param_key_short == "visible": # OBS specific
+                            text_to_select = "Visível" if str(value_to_set).lower() == "true" else "Oculto"
+                            combo_idx = control_widget.findText(text_to_select)
+                            if combo_idx != -1:
+                                control_widget.setCurrentIndex(combo_idx)
+                        elif param_key_short == "input_key": # vMix input key
+                            combo_idx = control_widget.findData(value_to_set) # Find by UserData (key)
+                            if combo_idx == -1 and value_to_set is None: # if key is None, select the "None" option
+                                 combo_idx = control_widget.findData(None) # Assumes "None" option has userData=None
+                            if combo_idx != -1:
+                                control_widget.setCurrentIndex(combo_idx)
+                            else:
+                                # Fallback for OBS scene/item names if not found, or other text-based combos
+                                if control_widget.isEditable():
+                                    control_widget.setEditText(str(value_to_set))
+                                elif param_key_short == "input_key" and value_to_set is None: 
+                                    # If input_key is None and "None" option not found by findData(None)
+                                    # try to find by text like "Nenhum" or "Padrão"
+                                    for i_text in range(control_widget.count()):
+                                        if control_widget.itemText(i_text).lower().startswith(("nenhum", "padrão", "preview/program")):
+                                            control_widget.setCurrentIndex(i_text)
+                                            break
+                                elif param_key_short == "mix_index": # Default if not found
+                                     default_mix_idx = control_widget.findData(1) # Try to select Program (Mix 1)
+                                     if default_mix_idx != -1: control_widget.setCurrentIndex(default_mix_idx)
+
         self.params_frame.setVisible(self.active_param_layout.rowCount() > 0)
         self.save_current_action_button.setEnabled(True) 
 
@@ -559,34 +669,45 @@ class ActionConfigDialog(QDialog):
                 if fn_name_edit: params["function_name"] = fn_name_edit.text().strip()
                 
                 input_combo = self.findChild(QComboBox, "param_vmix_input") 
-                if input_combo: 
-                    val = input_combo.currentText().strip()
-                    if val: params["input"] = val
+                if input_combo and input_combo.currentIndex() >= 0:
+                    input_key = input_combo.currentData() # Pega o UserData (key do input)
+                    if input_key: # Somente se não for "Nenhum" (que tem UserData=None)
+                        params["vmix_input"] = input_key 
                 
                 value_edit = self.findChild(QLineEdit, "param_vmix_value") 
                 if value_edit: 
                     val = value_edit.text().strip()
-                    if val: params["value"] = val
+                    if val: params["vmix_value"] = val
                 
                 duration_edit = self.findChild(QLineEdit, "param_vmix_duration") 
                 if duration_edit: 
                     val = duration_edit.text().strip()
-                    if val: params["duration"] = val
+                    if val: params["vmix_duration"] = val
 
+                mix_target_combo = self.findChild(QComboBox, "param_vmix_mix_target")
+                if mix_target_combo:
+                    mix_text = mix_target_combo.currentText()
+                    # Mapeamento: "Program": 0, "Mix 2": 1, "Mix 3": 2, "Mix 4": 3. "Nenhum" não adiciona o param.
+                    mix_map_to_index = {"Program": 0, "Mix 2": 1, "Mix 3": 2, "Mix 4": 3}
+                    if mix_text in mix_map_to_index:
+                        params["mix_index"] = mix_map_to_index[mix_text]
+            
             elif action_type == "SetText":
-                input_combo = self.findChild(QComboBox, "param_vmix_input_for_settext") 
-                if input_combo: 
-                    val = input_combo.currentText().strip()
-                    if val: params["input"] = val 
+                input_combo_st = self.findChild(QComboBox, "param_vmix_input_settext")
+                if input_combo_st and input_combo_st.currentIndex() >= 0:
+                    input_key = input_combo_st.currentData()
+                    if input_key: # Deve sempre haver um input selecionado aqui (add_none_option=False)
+                        params["vmix_input"] = input_key
+                    else:
+                        # Tratar caso onde, apesar de add_none_option=False, algo deu errado.
+                        # Idealmente, logar ou mostrar um erro ao usuário se input_key for None aqui.
+                        pass 
+
+                selected_name_edit = self.findChild(QLineEdit, "param_selected_name")
+                if selected_name_edit: params["selected_name"] = selected_name_edit.text().strip()
                 
-                sel_name_edit = self.findChild(QLineEdit, "param_vmix_selected_name") 
-                if sel_name_edit: 
-                    val = sel_name_edit.text().strip()
-                    if val: params["selected_name"] = val
-                
-                text_val_edit = self.findChild(QLineEdit, "param_vmix_text_value") 
-                if text_val_edit: 
-                    params["text_value"] = text_val_edit.text().strip() 
+                text_value_edit = self.findChild(QLineEdit, "param_text_value")
+                if text_value_edit: params["text_value"] = text_value_edit.text().strip()
 
             elif action_type in ["StartRecording", "StopRecording"]:
                 pass 
@@ -594,21 +715,35 @@ class ActionConfigDialog(QDialog):
             elif action_type == "Fade":
                 input_combo = self.findChild(QComboBox, "param_vmix_input_for_fade") 
                 if input_combo: 
-                    val = input_combo.currentText().strip()
-                    if val: params["input"] = val
+                    input_key = input_combo.currentData()
+                    if input_key is not None:
+                        params["vmix_input_for_fade"] = input_key
                 
                 duration_edit = self.findChild(QLineEdit, "param_vmix_duration_for_fade") 
                 if duration_edit: 
                     val = duration_edit.text().strip()
-                    if val: params["duration"] = val
+                    if val: params["vmix_duration_for_fade"] = val
+
+                mix_combo = self.findChild(QComboBox, "param_mix_index")
+                if mix_combo:
+                    mix_data = mix_combo.currentData()
+                    if mix_data is not None:
+                        params["mix_index"] = mix_data
 
             elif action_type == "Cut":
                 input_combo = self.findChild(QComboBox, "param_vmix_input_for_cut") 
                 if input_combo: 
-                    val = input_combo.currentText().strip()
-                    if val: params["input"] = val
+                    input_key = input_combo.currentData()
+                    if input_key is not None:
+                        params["vmix_input_for_cut"] = input_key
 
-            elif action_type == "OverlayInputIn":
+                mix_combo = self.findChild(QComboBox, "param_mix_index")
+                if mix_combo:
+                    mix_data = mix_combo.currentData()
+                    if mix_data is not None:
+                        params["mix_index"] = mix_data
+
+            elif action_type == "OverlayInputIn": 
                 channel_edit = self.findChild(QLineEdit, "param_overlay_channel") 
                 if channel_edit: 
                     val = channel_edit.text().strip()
@@ -616,33 +751,71 @@ class ActionConfigDialog(QDialog):
                 
                 input_combo = self.findChild(QComboBox, "param_vmix_input_for_overlay") 
                 if input_combo: 
-                    val = input_combo.currentText().strip()
-                    if val: params["input"] = val
-
+                    input_key = input_combo.currentData()
+                    if input_key is not None:
+                        params["vmix_input_for_overlay"] = input_key
+            
             elif action_type == "OverlayInputOut":
                 channel_edit = self.findChild(QLineEdit, "param_overlay_channel") 
                 if channel_edit: 
                     val = channel_edit.text().strip()
                     if val: params["overlay_channel"] = val
-
         return params
 
-    def _populate_vmix_inputs_combo(self, combo_box):
-        combo_box.clear()
-        if self.main_controller and self.main_controller.vmix_controller:
-            try:
-                inputs = self.main_controller.vmix_controller.get_inputs_list()
-                if inputs:
-                    combo_box.addItems(inputs)
-                    combo_box.insertItem(0, "") 
-                    combo_box.setCurrentIndex(0) 
-                else:
-                    combo_box.addItem("Nenhum input vMix encontrado")
-                    combo_box.setEnabled(False)
-            except Exception as e:
-                combo_box.addItem("Erro ao carregar inputs vMix")
-                combo_box.setEnabled(False)
-        else:
-            combo_box.addItem("Controlador vMix não disponível")
+    def _populate_vmix_inputs_combo(self, combo_box, add_none_option=True):
+        """Popula o QComboBox fornecido com os inputs do vMix."""
+        if not (self.main_controller and self.main_controller.vmix_controller):
+            combo_box.clear()
+            combo_box.addItem("vMix não conectado ou indisponível")
             combo_box.setEnabled(False)
+            return
+
+        try:
+            inputs = self.main_controller.vmix_controller.get_inputs_list()
+            combo_box.clear()
+            combo_box.setEnabled(True)
+
+            if add_none_option:
+                combo_box.addItem("Nenhum (ou Preview/Program)", None) # UserData None ou especial
+
+            if not inputs:
+                # Adicionar mensagem mesmo se estiver conectado mas não houver inputs
+                # ou se a lista retornada for vazia (o que get_inputs_list faz em caso de erro também)
+                no_inputs_msg = "Nenhum input encontrado no vMix"
+                if not self.main_controller.vmix_controller.check_connection()[0]: # Verifica novamente a conexão
+                    no_inputs_msg = "vMix não conectado"
+                combo_box.addItem(no_inputs_msg, None) 
+                combo_box.setEnabled(len(inputs) > 0) # Habilita só se houver inputs reais
+                return
+
+            for vmix_input in inputs:
+                # Usar title para display e key para userData.
+                # Algumas funções vMix podem preferir 'number' ou 'title' como input.
+                # Por agora, 'key' (GUID) é o mais específico.
+                # Ou poderíamos armazenar o dict completo: vmix_input
+                combo_box.addItem(f"{vmix_input['number']}: {vmix_input['title']} (Tipo: {vmix_input.get('type', 'N/A')})", vmix_input['key'])
+            
+            # Se após popular, apenas a opção "Nenhum" e/ou mensagens de erro estiverem presentes,
+            # e não houver inputs reais, talvez desabilitar.
+            # A lógica acima já tenta lidar com isso ao setar combo_box.setEnabled(len(inputs) > 0)
+            # mas é preciso cuidado se add_none_option = True.
+            # Se add_none_option e inputs estiver vazio, count será 1.
+            # Se add_none_option e inputs não estiver vazio, count > 1.
+            if combo_box.count() == 0 : # Se absolutamente nada foi adicionado
+                 combo_box.addItem("Falha ao carregar inputs", None)
+                 combo_box.setEnabled(False)
+            elif combo_box.count() == 1 and add_none_option and combo_box.itemData(0) is None: # Apenas "Nenhum"
+                # Poderia ser útil manter habilitado para permitir selecionar "Nenhum"
+                pass
+
+
+        except Exception as e:
+            combo_box.clear()
+            combo_box.addItem(f"Erro ao carregar inputs: {e}", None)
+            combo_box.setEnabled(False)
+            # Logar o erro também seria bom
+            if self.main_controller and hasattr(self.main_controller, '_log'):
+                 self.main_controller._log(f"ActionConfigDialog: Erro ao popular inputs vMix: {e}", "error")
+            else:
+                print(f"ActionConfigDialog: Erro ao popular inputs vMix: {e}")
             

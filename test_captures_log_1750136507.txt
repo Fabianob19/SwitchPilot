@@ -1,0 +1,12 @@
+Log dos Testes de Captura - 2025-06-17 02:01:47
+================================================================================
+
+Monitor: SUCESSO
+Detalhes: {'monitors_found': 2, 'capture_time_ms': 55.31454086303711, 'image_shape': (1080, 1920, 3), 'roi_shape': (200, 300, 3)}
+
+Janela: SUCESSO
+Detalhes: {'windows_found': 13, 'test_window': '🔒・𝐄𝐪𝐮𝐢𝐩𝐞 𝐒𝐚𝐠𝐚𝐜𝐢𝐝𝐚𝐝𝐞 | SAFADASSO - Discord', 'capture_time_ms': 33.11777114868164, 'image_shape': (744, 1382, 3), 'roi_shape': (150, 200, 3)}
+
+NDI: FALHA
+Detalhes: {'error': 'Timeout na captura NDI', 'sources_found': 3, 'frames_received': 0, 'frames_valid': 0}
+

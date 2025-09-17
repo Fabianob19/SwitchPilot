@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.0-beta1 (2025-09-17)
+- Primeira versão beta oficial.
+- Título personalizado escuro com botões (min/max/fechar) e menubar separada.
+- Ícone e logo novos (alta nitidez em 16–24 px), AppUserModelID no Windows.
+- Melhorias no seletor de fonte/ROI: listas com Atualizar, preview com escala 1:1 quando possível e downscale nítido.
+- App DPI-aware (Per-Monitor v2); coordenadas corretas em 125%/150% de escala.
+- Sistema de similaridade aprimorado (Hist+NCC+LBP) com suavização temporal.
+- vMix/OBS: mapeamentos de ações alinhados e conexão OBS sob demanda.
+- Logs otimizados na UI (debounce e limite de linhas).
+- NDI opcional na UI; dependência comentada em requirements.
+
 ## v1.1.0 (limpeza final)
 - Removido todo o suporte, dependências e arquivos relacionados ao NDI/NDIlib
 - Limpeza de arquivos de teste, binários e pastas antigas

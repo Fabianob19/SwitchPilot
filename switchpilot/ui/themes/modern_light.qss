@@ -1,0 +1,238 @@
+/* Tema Claro do SwitchPilot */
+
+QMainWindow {
+    background-color: #f0f0f0;
+    color: #2e3440;
+}
+
+QMenuBar {
+    background-color: #e5e5e5;
+    color: #2e3440;
+    border-bottom: 1px solid #d0d0d0;
+}
+
+QMenuBar::item {
+    spacing: 3px;
+    padding: 1px 4px;
+    background-color: transparent;
+    border-radius: 4px;
+}
+
+QMenuBar::item:selected {
+    background-color: #d0d0d0;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    color: #2e3440;
+}
+
+QMenu::item {
+    padding: 6px 20px 6px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #e0e0e0;
+}
+
+QDockWidget {
+    titlebar-close-icon: url(close.png);
+    titlebar-normal-icon: url(undock.png);
+    color: #2e3440;
+    background-color: #f5f5f5;
+    border: 1px solid #d0d0d0;
+}
+
+QDockWidget::title {
+    text-align: left;
+    background-color: #e5e5e5;
+    padding-left: 5px;
+    padding-top: 2px;
+    border-bottom: 1px solid #d0d0d0;
+    color: #2e3440;
+    font-weight: bold;
+}
+
+QPushButton {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 6px 12px;
+    color: #2e3440;
+    font-weight: normal;
+}
+
+QPushButton:hover {
+    background-color: #f0f0f0;
+    border: 1px solid #a0a0a0;
+}
+
+QPushButton:pressed {
+    background-color: #e0e0e0;
+    border: 1px solid #808080;
+}
+
+QPushButton:disabled {
+    background-color: #f8f8f8;
+    color: #808080;
+    border: 1px solid #d0d0d0;
+}
+
+QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #2e3440;
+}
+
+QComboBox:hover {
+    border: 1px solid #a0a0a0;
+}
+
+QComboBox::drop-down {
+    border: 0px;
+}
+
+QComboBox::down-arrow {
+    image: url(down_arrow_light.png);
+    width: 10px;
+    height: 6px;
+}
+
+QLineEdit {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #2e3440;
+}
+
+QLineEdit:focus {
+    border: 2px solid #5e81ac;
+}
+
+QLabel {
+    color: #2e3440;
+}
+
+QLabel[heading="true"] {
+    font-size: 14px;
+    font-weight: bold;
+    color: #2e3440;
+    margin: 8px 0px 4px 0px;
+}
+
+QTextEdit, QPlainTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    color: #2e3440;
+    selection-background-color: #5e81ac;
+}
+
+QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    color: #2e3440;
+    alternate-background-color: #f8f8f8;
+}
+
+QListWidget::item {
+    padding: 4px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+QListWidget::item:selected {
+    background-color: #5e81ac;
+    color: white;
+}
+
+QListWidget::item:hover {
+    background-color: #e0e0e0;
+}
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #c0c0c0;
+    border-radius: 6px;
+    margin-top: 1ex;
+    background-color: #f8f8f8;
+    color: #2e3440;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px 0 5px;
+    color: #2e3440;
+}
+
+QFrame {
+    background-color: #f5f5f5;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+}
+
+QCheckBox {
+    color: #2e3440;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #c0c0c0;
+    border-radius: 3px;
+    background-color: #ffffff;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #5e81ac;
+    border: 1px solid #4c6c8c;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #a0a0a0;
+}
+
+QDoubleSpinBox, QSpinBox {
+    background-color: #ffffff;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    padding: 4px;
+    color: #2e3440;
+}
+
+QDoubleSpinBox:focus, QSpinBox:focus {
+    border: 2px solid #5e81ac;
+}
+
+QTabWidget::pane {
+    border: 1px solid #c0c0c0;
+    background-color: #f8f8f8;
+}
+
+QTabBar::tab {
+    background-color: #e5e5e5;
+    border: 1px solid #c0c0c0;
+    padding: 6px 12px;
+    margin-right: 2px;
+    color: #2e3440;
+}
+
+QTabBar::tab:selected {
+    background-color: #ffffff;
+    border-bottom: 1px solid #ffffff;
+}
+
+QTabBar::tab:hover {
+    background-color: #f0f0f0;
+}
+
+QStatusBar {
+    background-color: #e5e5e5;
+    border-top: 1px solid #d0d0d0;
+    color: #2e3440;
+} 

@@ -59,6 +59,24 @@ class VMixController:
             return None
         return None
 
+    def send_function(self, function_name, **kwargs):
+        """
+        Envia uma função genérica para a API do vMix.
+        Aceita parâmetros adicionais como kwargs que serão mapeados diretamente (ex.: Input, Value, Duration, Mix).
+        Retorna True em caso de HTTP 200, caso contrário False.
+        """
+        if not function_name:
+            self._log("send_function: Nome da função não fornecido.", "error")
+            return False
+        # Filtrar parâmetros vazios/None
+        params = {k: v for k, v in kwargs.items() if v is not None and str(v) != ""}
+        response = self._send_request(function_name, params)
+        if response and response.status_code == 200:
+            self._log(f"Função genérica '{function_name}' enviada com params {params}", "info")
+            return True
+        self._log(f"Falha ao enviar função genérica '{function_name}' com params {params}", "error")
+        return False
+
     def check_connection(self):
         """Verifica a conexão com o vMix tentando obter a versão (raiz da API)."""
         self._log("vMix: Testando conexão...", "info")
@@ -98,32 +116,40 @@ class VMixController:
         return False, "Falha desconhecida no teste de conexão vMix."
 
     def get_inputs_list(self):
-        """Busca e retorna uma lista dos títulos dos inputs no vMix."""
-        self._log("vMix: Buscando lista de inputs...", "debug")
+        """Busca e retorna uma lista de dicionários dos inputs no vMix, contendo número, título e chave."""
+        self._log("vMix: Buscando lista de inputs detalhada...", "debug")
         if not self.host or not self.port:
             self._log("Host ou Porta do vMix não configurados para buscar inputs.", "error")
             return []
 
         base_url = f"http://{self.host}:{self.port}/api/"
-        inputs_list = []
+        inputs_details_list = []
         try:
-            response = requests.get(base_url, timeout=5) # Timeout um pouco maior para XML potencialmente grande
+            response = requests.get(base_url, timeout=5)
             response.raise_for_status()
             
-            # Parsear o XML
             xml_root = ET.fromstring(response.content)
             inputs_element = xml_root.find("inputs")
             if inputs_element is not None:
                 for input_node in inputs_element.findall("input"):
                     title = input_node.get("title")
-                    if title:
-                        inputs_list.append(title)
+                    number = input_node.get("number")
+                    key = input_node.get("key") # UUID do input
+                    input_type = input_node.get("type") # Adicionar tipo
+                    # Adicionar apenas inputs que tenham um título, número e chave
+                    if title and number and key:
+                        inputs_details_list.append({
+                            "title": title,
+                            "number": number,
+                            "key": key,
+                            "type": input_type # Adicionar tipo ao dicionário
+                        })
             
-            if not inputs_list:
-                self._log("Nenhum input encontrado no XML do vMix ou XML malformado.", "debug")
+            if not inputs_details_list:
+                self._log("Nenhum input detalhado encontrado no XML do vMix ou XML malformado.", "debug")
             else:
-                self._log(f"vMix: {len(inputs_list)} inputs encontrados: {inputs_list[:5]}...", "debug") # Logar alguns
-            return inputs_list
+                self._log(f"vMix: {len(inputs_details_list)} inputs detalhados encontrados: {inputs_details_list[:3]}...", "debug")
+            return inputs_details_list
 
         except requests.exceptions.Timeout:
             self._log(f"Timeout ao buscar lista de inputs do vMix API em {base_url}", "error")
@@ -145,7 +171,6 @@ class VMixController:
             input_name_or_key (str): Nome ou chave do Input (ex: "MeuTitulo.xaml" ou UUID).
             selected_name_or_index (str): Nome do campo de texto no Title (ex: "NomeConvidado.Text") 
                                          ou índice do campo de texto (ex: "0" para o primeiro).
-                                         Padrão "SelectedName" para o campo selecionado no editor de títulos do vMix.
             value (str): O texto a ser definido.
         """
         params = {
@@ -177,23 +202,23 @@ class VMixController:
             return True
         return False
 
-    def fade(self, input_key_or_name=None, duration_ms=500):
-        params = {"Duration": duration_ms}
+    def fade(self, input_key_or_name=None, duration_ms=500, mix_index=1):
+        params = {"Duration": duration_ms, "Mix": mix_index}
         if input_key_or_name:
             params["Input"] = input_key_or_name
         response = self._send_request("Fade", params)
         if response and response.status_code == 200:
-            self._log(f"Comando Fade (Duração: {duration_ms}ms, Input: {input_key_or_name if input_key_or_name else 'Preview/Program'}) enviado.", "info")
+            self._log(f"Comando Fade (Duração: {duration_ms}ms, Input: {input_key_or_name if input_key_or_name else 'Preview/Program'}, Mix: {mix_index}) enviado.", "info")
             return True
         return False
         
-    def cut(self, input_key_or_name=None):
-        params = {}
+    def cut(self, input_key_or_name=None, mix_index=1):
+        params = {"Mix": mix_index}
         if input_key_or_name:
             params["Input"] = input_key_or_name
         response = self._send_request("Cut", params)
         if response and response.status_code == 200:
-            self._log(f"Comando Cut (Input: {input_key_or_name if input_key_or_name else 'Preview/Program'}) enviado.", "info")
+            self._log(f"Comando Cut (Input: {input_key_or_name if input_key_or_name else 'Preview/Program'}, Mix: {mix_index}) enviado.", "info")
             return True
         return False
 

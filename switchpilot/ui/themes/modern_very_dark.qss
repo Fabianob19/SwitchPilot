@@ -23,6 +23,46 @@ QMainWindow {
     background-color: #1e1e1e;
 }
 
+/* --- Custom Title Bar --- */
+#CustomTitleBar {
+    background-color: #202225; /* um pouco acima do #1e1e1e */
+    border-bottom: 1px solid #2a2d31; /* linha sutil inferior */
+}
+#CustomTitleBar QLabel { color: #e6e6e6; }
+#CustomTitleBar QMenuBar {
+    background: transparent;
+    border: none;
+    padding: 0px 0px;
+    spacing: 14px;
+}
+#CustomTitleBar QMenuBar::item {
+    background: transparent;
+    color: #e6e6e6;
+    padding: 6px 12px;
+}
+#CustomTitleBar QMenuBar::item:selected {
+    color: #ffffff;
+    border-bottom: 2px solid #0099e6; /* sublinhado no ativo/hover */
+    background: transparent;
+}
+#CustomTitleBar QMenuBar::item:pressed {
+    color: #ffffff;
+    border-bottom: 2px solid #00afff;
+}
+#CustomTitleBar QToolButton {
+    color: #e6e6e6;
+    border: none;
+    background: transparent;
+    min-width: 36px; /* área clicável */
+    min-height: 28px;
+}
+#CustomTitleBar QToolButton:hover { background-color: rgba(255,255,255,0.10); }
+#CustomTitleBar QToolButton:pressed { background-color: rgba(255,255,255,0.18); }
+#CustomTitleBar QToolButton:last-of-type:hover { background-color: #e81123; color: white; }
+
+/* Divisores visuais podem ser implementados com um QFrame no código; aqui garantimos a cor */
+QFrame[role="titlebar-separator"] { background-color: #2a2d31; min-width: 1px; }
+
 /* QDockWidget - Painéis */
 QDockWidget {
     titlebar-close-icon: none; 

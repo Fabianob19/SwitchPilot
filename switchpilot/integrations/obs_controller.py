@@ -11,8 +11,9 @@ class OBSController:
         self.host = host
         self.port = port
         self.password = password # Senha fornecida na inicialização
-        # self.ws = None # Não vamos manter uma conexão persistente por enquanto
         self.log_callback = None
+        self.ws = None  # conexão persistente (criada sob demanda)
+        self._scene_item_id_cache = {}  # (scene_name, source_name) -> sceneItemId
 
     def set_log_callback(self, callback):
         self.log_callback = callback
@@ -50,11 +51,6 @@ class OBSController:
                 self._log("OBS HELLO contém challenge e salt. Tentando autenticar.", "debug")
                 if not password_to_use:
                     self._log("OBS challenge/salt recebido, mas nenhuma senha foi configurada/encontrada para gerar resposta.", "error")
-                    # Mesmo que não consigamos gerar a auth string, ainda podemos tentar o IDENTIFY sem ela,
-                    # pois authenticationRequired pode ser false. Mas se o OBS espera, vai falhar.
-                    # Para ser seguro, se challenge/salt estão lá e não temos senha, é um erro de configuração.
-                    # No entanto, o servidor pode aceitar um identify sem auth string se authRequired for false.
-                    # Vamos prosseguir e enviar o identify sem a auth string, mas logar o aviso severo.
                     self._log("Prosseguindo com IDENTIFY sem string de autenticação, apesar de challenge/salt presentes. Pode falhar.", "warning")
                 else:
                     challenge = auth_data_from_hello['challenge']
@@ -97,6 +93,121 @@ class OBSController:
             self._log(f"Erro inesperado durante a autenticação OBS: {e}", "error")
             return False
 
+    # --- Conexão persistente e utilitários ---
+    def _ensure_persistent_ws(self):
+        """Garante que self.ws esteja conectado e autenticado. Retorna True/False."""
+        try:
+            if self.ws is not None:
+                # websocket-client expõe .connected em WebSocket
+                if getattr(self.ws, 'connected', False):
+                    return True
+                # caso contrário, fecha e recria
+                try:
+                    self.ws.close()
+                except Exception:
+                    pass
+                self.ws = None
+            self._log(f"OBS (persistent): conectando a ws://{self.host}:{self.port}", "debug")
+            self.ws = websocket.create_connection(f"ws://{self.host}:{self.port}", timeout=3)
+            if not self._authenticate(self.ws):
+                try:
+                    self.ws.close()
+                except Exception:
+                    pass
+                self.ws = None
+                return False
+            self._log("OBS (persistent): conectado e autenticado.", "debug")
+            return True
+        except Exception as e:
+            self._log(f"OBS (persistent): falha ao conectar/autenticar: {e}", "error")
+            try:
+                if self.ws:
+                    self.ws.close()
+            except Exception:
+                pass
+            self.ws = None
+            return False
+
+    def _ws_send_request(self, request_type, request_data=None, timeout_seconds=5.0):
+        """Envia uma requisição usando a conexão persistente e espera pela resposta op:7 correspondente."""
+        if request_data is None:
+            request_data = {}
+        if not self._ensure_persistent_ws():
+            return None
+        try:
+            request_id = str(uuid.uuid4())
+            payload = {
+                "op": 6,
+                "d": {
+                    "requestType": request_type,
+                    "requestId": request_id,
+                    "requestData": request_data
+                }
+            }
+            self._log(f"OBS (persistent): enviando {request_type} -> {json.dumps(payload)}", "debug")
+            self.ws.send(json.dumps(payload))
+
+            deadline = time.time() + timeout_seconds
+            response_str = ""
+            while time.time() < deadline:
+                try:
+                    response_str = self.ws.recv()
+                    parsed_response = json.loads(response_str)
+                    op_code = parsed_response.get("op")
+                    if op_code == 7 and parsed_response.get("d", {}).get("requestId") == request_id:
+                        self._log(f"OBS (persistent): resposta op:7 recebida para {request_type}", "debug")
+                        return parsed_response
+                    elif op_code == 5:
+                        # Evento: ignorar
+                        continue
+                    else:
+                        # Outros pacotes (hello/identified não deveriam chegar aqui)
+                        continue
+                except Exception as e:
+                    self._log(f"OBS (persistent): erro no recv() para {request_type}: {e}", "error")
+                    try:
+                        self.ws.close()
+                    except Exception:
+                        pass
+                    self.ws = None
+                    return None
+            self._log(f"OBS (persistent): TIMEOUT aguardando resposta para {request_type}", "error")
+            return None
+        except Exception as e:
+            self._log(f"OBS (persistent): erro ao enviar {request_type}: {e}", "error")
+            return None
+
+    def _get_current_program_scene(self):
+        resp = self._ws_send_request("GetCurrentProgramScene")
+        if resp and resp.get('d', {}).get('requestStatus', {}).get('code') == 100:
+            return resp.get('d', {}).get('responseData', {}).get('currentProgramSceneName')
+        # Algumas respostas de sucesso podem vir sem requestStatus
+        if resp and not resp.get('d', {}).get('requestStatus'):
+            return resp.get('d', {}).get('responseData', {}).get('currentProgramSceneName')
+        return None
+
+    def _get_scene_item_id_cached(self, scene_name, source_name):
+        key = (scene_name, source_name)
+        if key in self._scene_item_id_cache:
+            return self._scene_item_id_cache[key]
+        # Buscar via API e preencher cache
+        resp = self._ws_send_request("GetSceneItemList", {"sceneName": scene_name})
+        if not resp:
+            return None
+        items = resp.get('d', {}).get('responseData', {}).get('sceneItems', [])
+        for item in items:
+            sname = item.get('sourceName')
+            sid = item.get('sceneItemId')
+            if sname:
+                self._scene_item_id_cache[(scene_name, sname)] = sid
+        return self._scene_item_id_cache.get(key)
+
+    def _invalidate_scene_cache(self, scene_name):
+        # Remove todas as entradas daquela cena
+        keys_to_del = [k for k in self._scene_item_id_cache.keys() if k[0] == scene_name]
+        for k in keys_to_del:
+            del self._scene_item_id_cache[k]
+
     def _send_request(self, request_type, request_data={}):
         """Conecta, autentica, envia uma requisição e retorna a resposta."""
         ws = None
@@ -131,17 +242,6 @@ class OBSController:
 
             while time.time() < deadline:
                 try:
-                    # O recv() da biblioteca websocket-client é bloqueante.
-                    # O timeout da conexão (3s no create_connection) pode ou não se aplicar aqui.
-                    # Este loop com deadline é uma camada adicional de segurança contra bloqueio indefinido.
-                    
-                    # Calcular o tempo restante para uma eventual chamada com timeout (se a lib suportasse por chamada)
-                    # remaining_time_for_recv = deadline - time.time()
-                    # if remaining_time_for_recv <= 0:
-                    #     self._log(f"OBS (_send_request): Timeout (deadline) atingido antes de chamar recv() para reqId {request_id}.", "error")
-                    #     # O finally cuidará de fechar o ws, não precisa retornar aqui se o finally estiver fora do loop
-                    #     break # Sai do while, resultando em timeout geral
-
                     response_str = ws.recv() 
                     self._log(f"OBS (_send_request): Resposta BRUTA recebida: {response_str[:250]}...", "debug") # Log um pouco maior
                     
@@ -167,27 +267,22 @@ class OBSController:
                         self._log(f"OBS (_send_request): op_code {op_code} inesperado recebido. Ignorando. Resposta: {parsed_response}", "warning")
                 
                 except websocket.WebSocketTimeoutException as e_timeout: 
-                    # Este except só seria atingido se o timeout do create_connection se aplicasse ao recv
-                    # e expirasse durante uma chamada ws.recv().
                     self._log(f"OBS (_send_request): WebSocketTimeoutException no recv() para reqId {request_id}: {e_timeout}. Continuando a tentar até o deadline.", "warning")
-                    # O loop while com deadline externo é a principal proteção de timeout.
-                    if time.time() >= deadline: # Verificar se o deadline geral também foi atingido
+                    if time.time() >= deadline: 
                         break
-                    continue # Tentar receber novamente dentro do deadline
+                    continue
                 except json.JSONDecodeError as e_json:
                     raw_response_for_log = response_str if response_str else "N/A" 
                     self._log(f"Erro ao decodificar JSON da resposta OBS em _send_request (loop) para reqId {request_id}: {e_json}. Resposta bruta: '{raw_response_for_log[:250]}...'.", "error")
-                    # Continuar no loop while, pode ser um pacote corrompido e o próximo ser bom.
                 except websocket.WebSocketConnectionClosedException as e_closed:
                     self._log(f"OBS (_send_request): Conexão WebSocket fechada inesperadamente (reqId {request_id}): {e_closed}", "error")
-                    return None # Sair do loop e da função, o finally fechará o ws se ainda existir.
+                    return None
                 except Exception as e_recv: 
                     self._log(f"OBS (_send_request): Exceção no recv() (loop) para reqId {request_id}: {e_recv}. Resposta: {response_str[:250] if response_str else 'N/A'}...", "error")
-                    return None # Sair por segurança, o finally fechará o ws.
+                    return None
 
-            # Se sair do loop while por causa do deadline
             self._log(f"OBS (_send_request): TIMEOUT GERAL ({operation_timeout_seconds}s) esperando pela resposta op:7 para requestId {request_id}.", "error")
-            return None # O finally fechará o ws.
+            return None
 
         except websocket.WebSocketBadStatusException as e_bad_status:
             self._log(f"Erro de status ao conectar/enviar para OBS em ws://{self.host}:{self.port}: {e_bad_status}", "error")
@@ -271,96 +366,54 @@ class OBSController:
     # set_source_render é mais complexo por precisar do sceneItemId.
     # Vamos adaptar set_scene_item_enabled_obs do código original.
     def set_source_visibility(self, scene_name, source_name, enabled):
-        """Define a visibilidade de uma fonte em uma cena específica (se scene_name=None, usa a atual)."""
+        """Define a visibilidade de uma fonte em uma cena específica usando conexão persistente.
+        Se scene_name=None, usa a cena de programa atual.
+        """
         scene_display_name = scene_name if scene_name else "CENA ATUAL"
         self._log(f"OBS: Visibilidade de '{source_name}' em '{scene_display_name}' para {enabled}", "info")
-        ws = None
-        try:
-            self._log(f"OBS: Conectando (para SetSourceVisibility) a ws://{self.host}:{self.port}", "debug")
-            ws = websocket.create_connection(f"ws://{self.host}:{self.port}", timeout=3)
-            
-            if not self._authenticate(ws):
-                if ws: ws.close()
-                return False
 
-            effective_scene_name = scene_name
+        # Garantir conexão persistente
+        if not self._ensure_persistent_ws():
+            return False
+
+        # Resolver cena efetiva
+        effective_scene_name = scene_name
+        if not effective_scene_name:
+            effective_scene_name = self._get_current_program_scene()
             if not effective_scene_name:
-                req_id_current_scene = str(uuid.uuid4())
-                payload_current_scene = {"op": 6, "d": {"requestType": "GetCurrentProgramScene", "requestId": req_id_current_scene}}
-                ws.send(json.dumps(payload_current_scene))
-                resp_current_scene_str = ws.recv()
-                self._log(f"OBS GetCurrentProgramScene RESPOSTA: {resp_current_scene_str}", "debug")
-                resp_current_scene = json.loads(resp_current_scene_str)
-                effective_scene_name = resp_current_scene.get('d', {}).get('responseData', {}).get('currentProgramSceneName')
-                if not effective_scene_name:
-                    self._log("OBS: Não foi possível obter cena atual para SetSourceVisibility.", "error")
-                    if ws: ws.close()
-                    return False
-                self._log(f"OBS: Cena atual para SetSourceVisibility: {effective_scene_name}", "debug")
+                self._log("OBS: Não foi possível obter cena atual para SetSourceVisibility.", "error")
+                return False
+            self._log(f"OBS: Cena atual para SetSourceVisibility: {effective_scene_name}", "debug")
 
-            req_id_list = str(uuid.uuid4())
-            payload_list = {"op": 6, "d": {"requestType": "GetSceneItemList", "requestData": {"sceneName": effective_scene_name}, "requestId": req_id_list}}
-            ws.send(json.dumps(payload_list))
-            resp_list_str = ws.recv()
-            self._log(f"OBS GetSceneItemList para '{effective_scene_name}' RESPOSTA: {resp_list_str}", "debug")
-            resp_list = json.loads(resp_list_str)
-            
-            scene_item_id = None
-            scene_items = resp_list.get('d', {}).get('responseData', {}).get('sceneItems', [])
-            for item in scene_items:
-                if item.get('sourceName') == source_name:
-                    scene_item_id = item.get('sceneItemId')
-                    break
-            
+        # Tentar com cache, se falhar, invalidar e tentar novamente
+        attempts = 2
+        for attempt in range(attempts):
+            scene_item_id = self._get_scene_item_id_cached(effective_scene_name, source_name)
             if scene_item_id is None:
                 self._log(f"OBS: Fonte '{source_name}' não encontrada na cena '{effective_scene_name}'.", "error")
-                if ws: ws.close()
                 return False
 
-            req_id_set = str(uuid.uuid4())
-            payload_set = {"op": 6, "d": {
-                "requestType": "SetSceneItemEnabled", 
-                "requestData": {"sceneName": effective_scene_name, "sceneItemId": scene_item_id, "sceneItemEnabled": enabled}, 
-                "requestId": req_id_set
-            }}
-            ws.send(json.dumps(payload_set))
-            resp_set_str = ws.recv()
-            self._log(f"OBS SetSceneItemEnabled para '{source_name}' RESPOSTA: {resp_set_str}", "debug")
-            resp_set = json.loads(resp_set_str)
-            
-            # Verificar o status da resposta do SetSceneItemEnabled
-            # A resposta para SetSceneItemEnabled não tem um 'requestStatus' como outras, 
-            # é apenas um op 7 (RequestResponse) sem 'responseData' se bem sucedido.
-            # Um erro retornaria um 'requestStatus' com 'code' != 100.
-            # Para simplificar, vamos assumir sucesso se não houver erro explícito.
-            # OBS WS Protocol: "If a request was successful, requestStatus will NOT be present."
-            # Então, se requestStatus não está lá, é sucesso. Se está, verificamos o código.
-            status_data = resp_set.get('d', {}).get('requestStatus', {})
-            if not status_data: # Sem requestStatus significa sucesso
-                 self._log(f"OBS: Visibilidade de '{source_name}' em '{effective_scene_name}' definida para {enabled} com sucesso.", "info")
-                 success = True
-            elif status_data.get('code') == 100: # Código 100 também é sucesso
-                 self._log(f"OBS: Visibilidade de '{source_name}' em '{effective_scene_name}' definida para {enabled} com sucesso (código 100).", "info")
-                 success = True
-            else:
-                 self._log(f"OBS: Falha ao definir visibilidade de '{source_name}'. Código: {status_data.get('code')}, Comentário: {status_data.get('comment')}", "error")
-                 success = False
-            
-            if ws: ws.close()
-            return success
+            req = self._ws_send_request(
+                "SetSceneItemEnabled",
+                {"sceneName": effective_scene_name, "sceneItemId": scene_item_id, "sceneItemEnabled": enabled}
+            )
 
-        except websocket.WebSocketTimeoutException:
-            self._log(f"Timeout durante SetSourceVisibility para OBS em ws://{self.host}:{self.port}", "error")
-            if ws: ws.close()
-            return False
-        except ConnectionRefusedError:
-            self._log(f"Conexão recusada pelo OBS (SetSourceVisibility) em ws://{self.host}:{self.port}. OBS aberto e WebSocket ativo?", "error")
-            if ws: ws.close()
-            return False
-        except Exception as e:
-            self._log(f"Erro durante SetSourceVisibility para OBS: {e}", "error")
-            if ws: ws.close()
-            return False
+            # Sucesso pode vir sem requestStatus (protocolo 5.x); se vier, código 100 é OK
+            if req is not None:
+                status = req.get('d', {}).get('requestStatus')
+                if (status is None) or (status.get('code') == 100):
+                    self._log(f"OBS: Visibilidade de '{source_name}' em '{effective_scene_name}' definida para {enabled} com sucesso.", "info")
+                    return True
+                else:
+                    self._log(f"OBS: Falha ao definir visibilidade (code={status.get('code')}, comment={status.get('comment')}). Tentando recarregar cache...", "warning")
+            else:
+                self._log("OBS: Resposta None ao definir visibilidade. Tentando recarregar cache...", "warning")
+
+            # Se chegou aqui, invalida cache e tenta novamente
+            self._invalidate_scene_cache(effective_scene_name)
+
+        self._log(f"OBS: Não foi possível definir visibilidade de '{source_name}' em '{effective_scene_name}'.", "error")
+        return False
 
     def toggle_mute(self, input_name):
         """Alterna o estado de mudo de uma fonte de áudio (input)."""

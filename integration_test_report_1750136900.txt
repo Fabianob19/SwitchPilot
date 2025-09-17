@@ -1,0 +1,25 @@
+Relatório de Integração SwitchPilot - 2025-06-17 02:08:20
+================================================================================
+
+Score Geral: 95.0%
+
+Processo: PASSOU
+PyQt5: PASSOU
+OpenCV: PASSOU
+MSS: PASSOU
+PyAutoGUI: PASSOU
+NDI: PASSOU
+OBS: PASSOU
+vMix: PASSOU
+vMix_API: FALHOU
+MainWindow: PASSOU
+MainController: PASSOU
+MonitorThread: PASSOU
+main.py: PASSOU
+requirements.txt: PASSOU
+switchpilot_config.json: PASSOU
+switchpilot/ui/main_window.py: PASSOU
+switchpilot/core/main_controller.py: PASSOU
+switchpilot/core/monitor_thread.py: PASSOU
+switchpilot/integrations/obs_controller.py: PASSOU
+switchpilot/integrations/vmix_controller.py: PASSOU

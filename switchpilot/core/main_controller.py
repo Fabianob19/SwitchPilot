@@ -369,15 +369,24 @@ class MainController(QObject):
                     func_name = params.get("function_name")
                     if func_name:
                         vmix_params = {}
-                        if params.get("input"): vmix_params["Input"] = params.get("input")
-                        if params.get("value"): vmix_params["Value"] = params.get("value")
-                        if params.get("duration"): vmix_params["Duration"] = params.get("duration")
+                        input_val = params.get("vmix_input") or params.get("input")
+                        if input_val: vmix_params["Input"] = input_val
+                        value_val = params.get("vmix_value") or params.get("value")
+                        if value_val: vmix_params["Value"] = value_val
+                        duration_val = params.get("vmix_duration") or params.get("duration")
+                        if duration_val: vmix_params["Duration"] = duration_val
+                        mix_idx = params.get("mix_index")
+                        if mix_idx is not None:
+                            try:
+                                vmix_params["Mix"] = int(mix_idx)
+                            except Exception:
+                                vmix_params["Mix"] = mix_idx
                         self.vmix_controller.send_function(func_name, **vmix_params)
                     else:
                         self._log_internal("vMix: Nome da função genérica ausente.", "error")
                 
                 elif action_type == "SetText":
-                    input_val = params.get("input")
+                    input_val = params.get("vmix_input") or params.get("input")
                     sel_name = params.get("selected_name", params.get("vmix_selected_name")) 
                     text_val = params.get("text_value")
                     if input_val and sel_name is not None and text_val is not None:
@@ -389,18 +398,40 @@ class MainController(QObject):
                 elif action_type == "StopRecording": self.vmix_controller.stop_recording()
                 
                 elif action_type == "Fade":
-                    duration = int(params.get("duration", 500))
-                    self.vmix_controller.fade(params.get("input"), duration)
+                    try:
+                        duration = int(params.get("vmix_duration_for_fade", params.get("duration", 500)) or 500)
+                    except Exception:
+                        duration = 500
+                    input_val = params.get("vmix_input") or params.get("vmix_input_for_fade") or params.get("input")
+                    mix_idx = params.get("mix_index", 1)
+                    try:
+                        mix_idx = int(mix_idx)
+                    except Exception:
+                        pass
+                    self.vmix_controller.fade(input_val, duration, mix_idx)
                 
                 elif action_type == "Cut":
-                    self.vmix_controller.cut(params.get("input"))
+                    input_val = params.get("vmix_input") or params.get("vmix_input_for_cut") or params.get("input")
+                    mix_idx = params.get("mix_index", 1)
+                    try:
+                        mix_idx = int(mix_idx)
+                    except Exception:
+                        pass
+                    self.vmix_controller.cut(input_val, mix_idx)
                 
                 elif action_type == "OverlayInputIn":
-                    channel = int(params.get("overlay_channel", 1))
-                    self.vmix_controller.overlay_input_in(channel, params.get("input"))
+                    try:
+                        channel = int(params.get("overlay_channel", 1))
+                    except Exception:
+                        channel = 1
+                    input_val = params.get("vmix_input") or params.get("vmix_input_for_overlay") or params.get("input")
+                    self.vmix_controller.overlay_input_in(channel, input_val)
                 
                 elif action_type == "OverlayInputOut":
-                    channel = int(params.get("overlay_channel", 1))
+                    try:
+                        channel = int(params.get("overlay_channel", 1))
+                    except Exception:
+                        channel = 1
                     self.vmix_controller.overlay_input_out(channel)
                 
                 else:
@@ -458,33 +489,33 @@ class MainController(QObject):
 
     # --- Métodos de Suporte para UI (ex: popular comboboxes no ActionConfigDialog) ---
     def get_obs_scene_list(self):
-        if self.obs_controller and self.obs_controller.ws:
+        if self.obs_controller:
             try:
                 return self.obs_controller.get_scene_list()
             except Exception as e:
                 self._log_internal(f"Erro ao obter lista de cenas OBS: {e}", "error")
                 return []
-        self._log_internal("Controlador OBS não conectado para obter lista de cenas.", "warning")
+        self._log_internal("Controlador OBS não disponível para obter lista de cenas.", "warning")
         return []
 
     def get_obs_scene_item_list(self, scene_name):
-        if self.obs_controller and self.obs_controller.ws and scene_name:
+        if self.obs_controller and scene_name:
             try:
                 return self.obs_controller.get_scene_item_list_from_scene_name(scene_name)
             except Exception as e:
                 self._log_internal(f"Erro ao obter lista de itens da cena OBS '{scene_name}': {e}", "error")
                 return []
-        self._log_internal(f"Controlador OBS não conectado ou nome da cena ausente para obter itens da cena.", "warning")
+        self._log_internal(f"Controlador OBS não disponível ou nome da cena ausente para obter itens da cena.", "warning")
         return []
 
     def get_obs_input_list(self):
-        if self.obs_controller and self.obs_controller.ws:
+        if self.obs_controller:
             try:
                 return self.obs_controller.get_input_list() # Lista de fontes de áudio/inputs
             except Exception as e:
                 self._log_internal(f"Erro ao obter lista de inputs OBS: {e}", "error")
                 return []
-        self._log_internal("Controlador OBS não conectado para obter lista de inputs.", "warning")
+        self._log_internal("Controlador OBS não disponível para obter lista de inputs.", "warning")
         return []
     
     def get_vmix_inputs(self):
