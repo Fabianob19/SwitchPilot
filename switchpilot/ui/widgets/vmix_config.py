@@ -91,7 +91,7 @@ class VMixConfigWidget(QWidget):
 # REMOVIDO BLOCO if __name__ == '__main__':
 
     # Para aplicar o estilo (opcional, mas bom para visualização)
-    # QSS_PATH = "../themes/modern_dark_obs.qss" 
+    # QSS_PATH = "../themes/modern_dark_obs.qss"
     # try:
     #     with open(QSS_PATH, "r") as f:
     #         app.setStyleSheet(f.read())

@@ -678,8 +678,7 @@ class ReferenceManagerWidget(QWidget):
             )
             QMessageBox.warning(self, "Erro", msg)
             return
-        
-        
+
 
         if not self.main_controller:
             QMessageBox.critical(self, "Erro Crítico", "MainController não está disponível no ReferenceManagerWidget. Não é possível abrir o diálogo de ações.")
@@ -729,7 +728,7 @@ class ReferenceManagerWidget(QWidget):
             user_data_payload = name
 
         item = QListWidgetItem(display_text)
-        item.setData(Qt.UserRole, user_data_payload) # Armazena o caminho (estático) ou nome (sequência)
+        item.setData(Qt.UserRole, user_data_payload)  # Armazena o caminho (estático) ou nome (sequência)
 
         # Adicionar Tooltip com detalhes das ações (se houver)
         actions = ref_data.get('actions', [])
@@ -738,7 +737,7 @@ class ReferenceManagerWidget(QWidget):
             if self.main_controller and hasattr(self.main_controller, 'get_action_description'):
                 for action in actions:
                     action_descriptions.append(self.main_controller.get_action_description(action))
-            else: # Fallback se o controller ou método não estiver disponível
+            else:  # Fallback se o controller ou método não estiver disponível
                 action_descriptions = [f"{a.get('integration', '')}: {a.get('action_type', '')}" for a in actions]
             
             tooltip_text = f"{display_text}\nAções:\n- " + "\n- ".join(action_descriptions)
@@ -867,7 +866,7 @@ class ReferenceManagerWidget(QWidget):
         while extracted_count < max_frames_to_extract:
             ret, frame = cap.read()
             if not ret:
-                break # Fim do vídeo ou erro de leitura
+                break  # Fim do vídeo ou erro de leitura
 
             # Processar apenas os frames no intervalo desejado
             if current_frame_idx % desired_interval == 0:
