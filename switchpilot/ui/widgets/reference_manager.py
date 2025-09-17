@@ -672,10 +672,14 @@ class ReferenceManagerWidget(QWidget):
             selected_ref_data = self.references_data[current_row]
         
         if not selected_ref_data:
-            QMessageBox.warning(self, "Erro", f"Não foi possível encontrar os dados para a referência selecionada '{current_item.text()}'.")
+            msg = (
+                f"Não foi possível encontrar os dados para a referência "
+                f"selecionada '{current_item.text()}'."
+            )
+            QMessageBox.warning(self, "Erro", msg)
             return
         
-        # REMOVIDO: print(f"[RMW DEBUG] Antes de abrir ActionConfigDialog, selected_ref_data['actions']: {selected_ref_data.get('actions')}") 
+        
 
         if not self.main_controller:
             QMessageBox.critical(self, "Erro Crítico", "MainController não está disponível no ReferenceManagerWidget. Não é possível abrir o diálogo de ações.")
@@ -692,7 +696,7 @@ class ReferenceManagerWidget(QWidget):
 
     def load_references(self, references_data_list):
         """Carrega as referências na lista a partir de uma lista de dicionários."""
-        self.references_data = list(references_data_list) # Garantir que é uma cópia e é uma lista
+        self.references_data = list(references_data_list)  # Garantir que é uma cópia e é uma lista
         self.reference_list_widget.clear()
         for ref_data in self.references_data:
             self._display_reference_in_list(ref_data)
@@ -701,10 +705,10 @@ class ReferenceManagerWidget(QWidget):
     def _display_reference_in_list(self, ref_data):
         """Adiciona um item ao QListWidget com base nos dados da referência."""
         name = ref_data.get('name', 'Referência Desconhecida')
-        ref_type = ref_data.get('type', 'static') # Padrão para 'static' se não especificado
+        ref_type = ref_data.get('type', 'static')  # Padrão para 'static' se não especificado
 
         display_text = name
-        user_data_payload = None # O que será armazenado no item para identificação
+        user_data_payload = None  # O que será armazenado no item para identificação
 
         if ref_type == 'sequence':
             frame_paths = ref_data.get('frame_paths', [])
@@ -714,16 +718,15 @@ class ReferenceManagerWidget(QWidget):
             # Ou, para fácil acesso aos frames, o primeiro frame.
             # Para identificação na lista, o nome da sequência é suficiente.
             # A lógica de `_handle_configure_actions` precisará encontrar `ref_data` por nome/índice.
-            user_data_payload = name # Usar o nome da sequência como identificador no UserRole
+            user_data_payload = name  # Usar o nome da sequência como identificador no UserRole
         
         elif ref_type == 'static':
-            display_text = name # O nome já inclui a extensão .png, etc.
-            user_data_payload = ref_data.get('path') # Para estático, o caminho é um bom UserRole
+            display_text = name  # O nome já inclui a extensão .png, etc.
+            user_data_payload = ref_data.get('path')  # Para estático, o caminho é um bom UserRole
         
-        else: # Tipo desconhecido, apenas mostrar o nome
+        else:  # Tipo desconhecido, apenas mostrar o nome
             display_text = f"[Desconhecido] {name}"
             user_data_payload = name
-
 
         item = QListWidgetItem(display_text)
         item.setData(Qt.UserRole, user_data_payload) # Armazena o caminho (estático) ou nome (sequência)
@@ -774,7 +777,10 @@ class ReferenceManagerWidget(QWidget):
         sequence_name_suggestion = f"{sanitized_base_name}_seq"
         temp_idx = 1
         # Verificar se já existe uma sequência com esse nome para sugerir nome_01, nome_02 etc.
-        while any(ref.get('name') == sequence_name_suggestion and ref.get('type') == 'sequence' for ref in self.references_data):
+        while any(
+            ref.get('name') == sequence_name_suggestion and ref.get('type') == 'sequence'
+            for ref in self.references_data
+        ):
             sequence_name_suggestion = f"{sanitized_base_name}_seq_{temp_idx:02d}"
             temp_idx += 1
 
@@ -782,18 +788,33 @@ class ReferenceManagerWidget(QWidget):
                                                  "Digite o nome para a sequência:",
                                                  text=sequence_name_suggestion)
         if not (ok and sequence_name):
-            QMessageBox.information(self, "Adição Cancelada", "A criação da sequência de referência foi cancelada.")
+            QMessageBox.information(
+                self,
+                "Adição Cancelada",
+                "A criação da sequência de referência foi cancelada.",
+            )
             return
         
         # Sanitizar o nome da sequência também
         sequence_name = re.sub(r'[^a-zA-Z0-9_\\-]', '_', sequence_name.strip())
         if not sequence_name:
-            QMessageBox.warning(self, "Nome Inválido", "O nome da sequência não pode ser vazio após sanitização. Usando nome padrão.")
-            sequence_name = sequence_name_suggestion # Reverter para o sugerido se o usuário fornecer algo que se torna vazio
+            QMessageBox.warning(
+                self,
+                "Nome Inválido",
+                "O nome da sequência não pode ser vazio após sanitização. Usando nome padrão.",
+            )
+            sequence_name = sequence_name_suggestion  # Reverter para o sugerido se o usuário fornecer algo que se torna vazio
 
         # Verificar novamente se o nome da sequência já existe (após sanitização do usuário)
-        if any(ref.get('name') == sequence_name and ref.get('type') == 'sequence' for ref in self.references_data):
-            QMessageBox.warning(self, "Nome Duplicado", f"Uma sequência com o nome '{sequence_name}' já existe. Por favor, escolha outro nome.")
+        if any(
+            ref.get('name') == sequence_name and ref.get('type') == 'sequence'
+            for ref in self.references_data
+        ):
+            QMessageBox.warning(
+                self,
+                "Nome Duplicado",
+                f"Uma sequência com o nome '{sequence_name}' já existe. Por favor, escolha outro nome.",
+            )
             # Poderia re-abrir o QInputDialog ou adicionar sufixo automaticamente, mas por ora só avisa.
             return
 
@@ -810,8 +831,11 @@ class ReferenceManagerWidget(QWidget):
             self._display_reference_in_list(new_ref_data)
             self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
             self.references_updated.emit(self.get_all_references_data())
-            QMessageBox.information(self, "Sequência Adicionada",
-                                  f"Sequência '{sequence_name}' com {len(frame_paths)} frames adicionada com sucesso.")
+            QMessageBox.information(
+                self,
+                "Sequência Adicionada",
+                f"Sequência '{sequence_name}' com {len(frame_paths)} frames adicionada com sucesso.",
+            )
         else:
             QMessageBox.warning(self, "Falha na Extração",
                                 f"Não foi possível extrair frames de '{original_filename}'. A sequência não foi adicionada.")
@@ -830,11 +854,12 @@ class ReferenceManagerWidget(QWidget):
         # Ou, podemos pegar X frames no total, espaçados uniformemente.
         # Exemplo: pegar no máximo 20 frames, espaçados.
         
-        max_frames_to_extract = 20 
-        desired_interval = 1 # Extrair todos os frames se <= max_frames_to_extract
+        max_frames_to_extract = 20
+        desired_interval = 1  # Extrair todos os frames se <= max_frames_to_extract
         if frame_count_total > max_frames_to_extract:
             desired_interval = frame_count_total // max_frames_to_extract
-            if desired_interval == 0 : desired_interval = 1 # Evitar divisão por zero se for um vídeo muito curto
+            if desired_interval == 0:
+                desired_interval = 1  # Evitar divisão por zero se for um vídeo muito curto
         
         extracted_count = 0
         current_frame_idx = 0
@@ -853,8 +878,10 @@ class ReferenceManagerWidget(QWidget):
                 # (embora o sequence_base_name já deva ser único)
                 temp_frame_count = 0
                 while os.path.exists(frame_filepath):
-                    temp_frame_count +=1
-                    frame_filename = f"{sequence_base_name}_frame_{extracted_count:03d}_{temp_frame_count}.png"
+                    temp_frame_count += 1
+                    frame_filename = (
+                        f"{sequence_base_name}_frame_{extracted_count:03d}_{temp_frame_count}.png"
+                    )
                     frame_filepath = os.path.join(self.references_dir, frame_filename)
 
                 if cv2.imwrite(frame_filepath, frame):
@@ -870,9 +897,20 @@ class ReferenceManagerWidget(QWidget):
         cap.release()
         
         if not frame_paths:
-             QMessageBox.warning(self, "Extração de Frames", f"Nenhum frame foi extraído de {video_path}. Verifique o arquivo.")
-        elif extracted_count < frame_count_total // desired_interval if desired_interval > 0 else frame_count_total : # Se menos frames que o esperado foram extraidos
-            QMessageBox.information(self, "Extração Parcial", f"Foram extraídos {extracted_count} frames de {video_path}. Esperava-se mais, verifique o vídeo.")
+            msg_none = (
+                f"Nenhum frame foi extraído de {video_path}. Verifique o arquivo."
+            )
+            QMessageBox.warning(self, "Extração de Frames", msg_none)
+        else:
+            expected_total = (
+                frame_count_total // desired_interval if desired_interval > 0 else frame_count_total
+            )
+            if extracted_count < expected_total:
+                msg_partial = (
+                    f"Foram extraídos {extracted_count} frames de {video_path}. "
+                    "Esperava-se mais, verifique o vídeo."
+                )
+                QMessageBox.information(self, "Extração Parcial", msg_partial)
             
         return frame_paths
 

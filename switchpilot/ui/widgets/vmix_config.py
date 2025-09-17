@@ -57,6 +57,7 @@ class VMixConfigWidget(QWidget):
 
         self.setLayout(layout)
 
+
     def _setup_connections(self):
         """Configura as conexões de sinais e slots."""
         self.test_button.clicked.connect(self.test_connection.emit)
