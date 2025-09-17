@@ -1016,15 +1016,12 @@ class ReferenceManagerWidget(QWidget):
                         NDI.destroy()
 
                         return frame_bgr
-                    
                     elif frame_type == NDI.FRAME_TYPE_AUDIO:
                         # Liberar frame de áudio (não precisamos)
                         NDI.recv_free_audio_v2(ndi_recv, audio_frame)
-                    
                     elif frame_type == NDI.FRAME_TYPE_METADATA:
                         # Liberar metadata (não precisamos)
                         NDI.recv_free_metadata(ndi_recv, metadata_frame)
-                    
                     # Pequena pausa para não sobrecarregar
                     time.sleep(0.01)
 
