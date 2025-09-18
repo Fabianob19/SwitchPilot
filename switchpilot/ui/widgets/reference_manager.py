@@ -351,7 +351,9 @@ class ReferenceManagerWidget(QWidget):
                         'roi': roi,
                         'source_name': capture_source_name
                     }
-                    self.pgm_region_label.setText(f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {capture_source_name}")
+                    self.pgm_region_label.setText(
+                        f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {capture_source_name}"
+                    )
                     self.pgm_region_label.setStyleSheet("color: #a3be8c;")
                     # REMOVIDO: print(f"Região PGM selecionada: {self.selected_pgm_details}")
 
@@ -372,13 +374,17 @@ class ReferenceManagerWidget(QWidget):
                                 break
                             temp_idx += 1
 
-                        text, ok = QInputDialog.getText(self, "Nome da Referência",
-                                                        "Digite o nome para a imagem de referência (sem extensão):",
-                                                        text=suggested_base_name)
+                        text, ok = QInputDialog.getText(
+                            self,
+                            "Nome da Referência",
+                            "Digite o nome para a imagem de referência (sem extensão)::",
+                            text=suggested_base_name,
+                        )
 
                         if ok and text:
                             # Sanitizar o nome do arquivo
-                            base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip())  # Permitir pontos para extensões futuras, mas vamos adicionar .png
+                            # Permitir pontos para extensões futuras, mas vamos adicionar .png
+                            base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip())
                             if not base_filename:  # Se o nome se tornar vazio após sanitização
                                 base_filename = suggested_base_name  # Usar o padrão
 
@@ -400,7 +406,9 @@ class ReferenceManagerWidget(QWidget):
                                 self.references_data.append(new_ref_data)
 
                                 self._display_reference_in_list(new_ref_data)
-                                self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
+                                self.reference_list_widget.setCurrentRow(
+                                    self.reference_list_widget.count() - 1
+                                )
                                 self.references_updated.emit(self.get_all_references_data())  # Usar getter
                                 QMessageBox.information(
                                     self,
