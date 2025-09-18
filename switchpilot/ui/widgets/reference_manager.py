@@ -468,7 +468,6 @@ class ReferenceManagerWidget(QWidget):
         """Popula a lista de monitores disponíveis."""
         self.monitor_list_combo.clear()
         try:
-            import mss
             with mss.mss() as sct:
                 # sct.monitors[0] é informação geral, monitores reais começam do índice 1
                 for i in range(1, len(sct.monitors)):
@@ -491,7 +490,10 @@ class ReferenceManagerWidget(QWidget):
             found_windows = False
             for window in windows:
                 # Adicionar apenas janelas com título, visíveis e com área
-                if window.title and window.visible and getattr(window, 'width', 0) > 0 and getattr(window, 'height', 0) > 0:
+                if (
+                    window.title and window.visible and getattr(window, 'width', 0) > 0
+                    and getattr(window, 'height', 0) > 0
+                ):
                     # Evitar listar a própria janela do SwitchPilot para reduzir acidentes
                     try:
                         if 'SwitchPilot' in window.title:
@@ -501,7 +503,7 @@ class ReferenceManagerWidget(QWidget):
                     # Guardar o título e, se possível, um identificador (como o HWND ou o objeto)
                     # Por enquanto, apenas o título para simplicidade.
                     # Poderíamos usar window.title como texto e o objeto window como userData.
-                    self.window_list_combo.addItem(window.title, userData=window) # Armazenando o objeto window
+                    self.window_list_combo.addItem(window.title, userData=window)  # Armazenando o objeto window
                     found_windows = True
 
             if not found_windows:
@@ -509,7 +511,7 @@ class ReferenceManagerWidget(QWidget):
                 # Aqui você poderia emitir um sinal ou logar se preferir
                 # REMOVIDO: print("Nenhuma janela de aplicativo encontrada para captura.")
 
-        except Exception as e:
+        except Exception:
             self.window_list_combo.addItem("Erro ao listar janelas")
             # REMOVIDO: print(f"Erro ao tentar listar janelas de aplicativos: {e}")
             # Logar o erro aqui também seria bom
