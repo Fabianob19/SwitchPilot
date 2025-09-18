@@ -1,5 +1,23 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                             QLabel, QListWidget, QFrame, QSizePolicy, QComboBox, QFormLayout, QSpacerItem, QMessageBox, QListWidgetItem, QInputDialog, QFileDialog, QDialog, QMenu, QAction)
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QListWidget,
+    QFrame,
+    QSizePolicy,
+    QComboBox,
+    QFormLayout,
+    QSpacerItem,
+    QMessageBox,
+    QListWidgetItem,
+    QInputDialog,
+    QFileDialog,
+    QDialog,
+    QMenu,
+    QAction,
+)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 import pyautogui  # Adicionada importação
 import mss  # Adicionada importação
@@ -202,7 +220,11 @@ class ReferenceManagerWidget(QWidget):
                 selected_monitor_idx = self.monitor_list_combo.currentIndex()
                 print(f"[DEBUG] Índice do monitor selecionado: {selected_monitor_idx}")
 
-                if selected_monitor_idx < 0 or self.monitor_list_combo.itemText(selected_monitor_idx) == "Nenhum monitor encontrado":
+        if (
+            selected_monitor_idx < 0
+            or self.monitor_list_combo.itemText(selected_monitor_idx)
+            == "Nenhum monitor encontrado"
+        ):
                     QMessageBox.warning(self, "Seleção de Monitor", "Por favor, selecione um monitor válido na lista.")
                     return
 
@@ -230,7 +252,14 @@ class ReferenceManagerWidget(QWidget):
                 selected_window_idx = self.window_list_combo.currentIndex()
                 print(f"[DEBUG] Índice da janela selecionada: {selected_window_idx}")
 
-                if selected_window_idx < 0 or self.window_list_combo.itemText(selected_window_idx) in ["Nenhuma janela encontrada", "Erro ao listar janelas"]:
+                if (
+                    selected_window_idx < 0
+                    or self.window_list_combo.itemText(selected_window_idx)
+                    in [
+                        "Nenhuma janela encontrada",
+                        "Erro ao listar janelas",
+                    ]
+                ):
                     QMessageBox.warning(self, "Seleção de Janela", "Por favor, selecione uma janela válida na lista.")
                     return
 
@@ -238,18 +267,37 @@ class ReferenceManagerWidget(QWidget):
                 print(f"[DEBUG] Objeto da janela: {window_obj}")
 
                 if not window_obj:
-                    QMessageBox.warning(self, "Seleção de Janela", "Não foi possível obter dados da janela selecionada.")
+                    QMessageBox.warning(
+                        self,
+                        "Seleção de Janela",
+                        "Não foi possível obter dados da janela selecionada.",
+                    )
                     return
 
                 # pyautogui.screenshot pode falhar se a janela for minimizada ou não tiver área.
-                # Usar as coordenadas da janela para o screenshot
-                # É importante que window_obj.left, top, width, height sejam válidos
-                # Alguns sistemas/janelas podem retornar coordenadas relativas ou (0,0,0,0) se não estiverem visíveis/ativas
-                # Adicionando uma verificação extra
-                print(f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, width={window_obj.width}, height={window_obj.height}")
+                # Usar as coordenadas da janela para o screenshot.
+                # É importante que window_obj.left, top, width, height sejam válidos.
+                # Alguns sistemas/janelas podem retornar (0,0,0,0) se não estiverem visíveis/ativas.
+                # Adicionando uma verificação extra.
+                print(
+                    f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, "
+                    f"width={window_obj.width}, height={window_obj.height}"
+                )
 
-                if window_obj.left is None or window_obj.top is None or window_obj.width is None or window_obj.height is None:
-                    QMessageBox.warning(self, "Seleção de Janela", f"Não foi possível obter as coordenadas da janela '{window_obj.title}'. Tente trazê-la para frente.")
+                if (
+                    window_obj.left is None
+                    or window_obj.top is None
+                    or window_obj.width is None
+                    or window_obj.height is None
+                ):
+                    QMessageBox.warning(
+                        self,
+                        "Seleção de Janela",
+                        (
+                            f"Não foi possível obter as coordenadas da janela '{window_obj.title}'. "
+                            "Tente trazê-la para frente."
+                        ),
+                    )
                     return
 
                 region_capture = (window_obj.left, window_obj.top, window_obj.width, window_obj.height)
@@ -269,7 +317,15 @@ class ReferenceManagerWidget(QWidget):
                 selected_ndi_idx = self.ndi_list_combo.currentIndex()
                 print(f"[DEBUG] Índice da fonte NDI selecionada: {selected_ndi_idx}")
 
-                if selected_ndi_idx < 0 or self.ndi_list_combo.itemText(selected_ndi_idx) in ["Carregando fontes NDI...", "Nenhuma fonte NDI encontrada", "Erro ao listar fontes NDI"]:
+                if (
+                    selected_ndi_idx < 0
+                    or self.ndi_list_combo.itemText(selected_ndi_idx)
+                    in [
+                        "Carregando fontes NDI...",
+                        "Nenhuma fonte NDI encontrada",
+                        "Erro ao listar fontes NDI",
+                    ]
+                ):
                     QMessageBox.warning(self, "Seleção de Fonte", "Por favor, selecione uma fonte NDI válida na lista.")
                     return
 
@@ -277,7 +333,11 @@ class ReferenceManagerWidget(QWidget):
                 print(f"[DEBUG] Dados da fonte NDI: {ndi_source}")
 
                 if not ndi_source:
-                    QMessageBox.warning(self, "Seleção de Fonte", "Não foi possível obter dados da fonte NDI selecionada.")
+                    QMessageBox.warning(
+                        self,
+                        "Seleção de Fonte",
+                        "Não foi possível obter dados da fonte NDI selecionada.",
+                    )
                     return
 
                 print("[DEBUG] Chamando _capture_ndi_frame...")

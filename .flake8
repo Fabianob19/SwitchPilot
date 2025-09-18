@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 120
-exclude = .git,__pycache__,.venv,.venv310,env,venv,build,dist
+exclude = .git,__pycache__,.venv,.venv310,env,venv,build,dist,archive
 per-file-ignores =
 	# arquivos gerados ou de terceiros (se algum for rastreado futuramente)
 	# nenhum por enquanto
