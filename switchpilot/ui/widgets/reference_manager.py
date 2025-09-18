@@ -402,28 +402,61 @@ class ReferenceManagerWidget(QWidget):
                                 self._display_reference_in_list(new_ref_data)
                                 self.reference_list_widget.setCurrentRow(self.reference_list_widget.count() - 1)
                                 self.references_updated.emit(self.get_all_references_data())  # Usar getter
-                                QMessageBox.information(self, "Referência Salva", f"Referência '{final_filename}' salva com sucesso.")
+                                QMessageBox.information(
+                                    self,
+                                    "Referência Salva",
+                                    f"Referência '{final_filename}' salva com sucesso.",
+                                )
                             else:
-                                QMessageBox.critical(self, "Erro ao Salvar", f"Não foi possível salvar a imagem de referência em {filepath}")
+                                QMessageBox.critical(
+                                    self,
+                                    "Erro ao Salvar",
+                                    f"Não foi possível salvar a imagem de referência em {filepath}",
+                                )
                         elif ok and not text:  # Usuário clicou OK mas deixou o nome vazio
-                            QMessageBox.warning(self, "Nome Inválido", "O nome da referência não pode ser vazio. Referência não salva.")
+                            QMessageBox.warning(
+                                self,
+                                "Nome Inválido",
+                                "O nome da referência não pode ser vazio. Referência não salva.",
+                            )
                         else:  # Usuário cancelou o QInputDialog
-                            QMessageBox.information(self, "Captura Cancelada", "Seleção de região PGM mantida, mas a referência não foi salva.")
+                            QMessageBox.information(
+                                self,
+                                "Captura Cancelada",
+                                "Seleção de região PGM mantida, mas a referência não foi salva.",
+                            )
                     # --- Fim da adição automática ---
                 else:
                     self.selected_pgm_details = None
                     self.pgm_region_label.setText("Região PGM: Seleção cancelada ou inválida")
-                    self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")  # Vermelho para erro/aviso
+                    self.pgm_region_label.setStyleSheet(
+                        "font-style: italic; color: #bf616a;"
+                    )  # Vermelho para erro/aviso
             else:
-                QMessageBox.warning(self, "Erro de Captura", "Não foi possível capturar a imagem da fonte selecionada.")
+                QMessageBox.warning(
+                    self,
+                    "Erro de Captura",
+                    "Não foi possível capturar a imagem da fonte selecionada.",
+                )
 
         except mss.exception.ScreenShotError as e:
-            QMessageBox.critical(self, "Erro MSS", f"Erro ao capturar tela com MSS: {e}\nVerifique se há permissões ou se outro app está bloqueando.")
+            QMessageBox.critical(
+                self,
+                "Erro MSS",
+                (
+                    f"Erro ao capturar tela com MSS: {e}\n"
+                    "Verifique se há permissões ou se outro app está bloqueando."
+                ),
+            )
             self.selected_pgm_details = None
             self.pgm_region_label.setText("Região PGM: Erro na captura")
             self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")
         except Exception as e:
-            QMessageBox.critical(self, "Erro Inesperado", f"Ocorreu um erro ao selecionar a região: {e}")
+            QMessageBox.critical(
+                self,
+                "Erro Inesperado",
+                f"Ocorreu um erro ao selecionar a região: {e}",
+            )
             self.selected_pgm_details = None
             self.pgm_region_label.setText("Região PGM: Erro na seleção")
             self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")
@@ -432,7 +465,11 @@ class ReferenceManagerWidget(QWidget):
 
     def _pick_window_by_click(self):
         """Seleciona automaticamente a janela sob o cursor após um pequeno atraso."""
-        QMessageBox.information(self, "Selecionar Janela", "Função removida para simplificar. Use a lista de janelas e o botão Atualizar.")
+        QMessageBox.information(
+            self,
+            "Selecionar Janela",
+            "Função removida para simplificar. Use a lista de janelas e o botão Atualizar.",
+        )
 
     def _on_source_type_changed(self, index):
         source_name = self.source_type_combo.itemText(index)
