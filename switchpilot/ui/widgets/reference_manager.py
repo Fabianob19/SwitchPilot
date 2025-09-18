@@ -574,18 +574,24 @@ class ReferenceManagerWidget(QWidget):
 
         # Abrir o diálogo para selecionar um ou mais arquivos
         # O diretório inicial pode ser o último usado ou um padrão
-        filepaths, _ = QFileDialog.getOpenFileNames(self,
-                                                    "Selecionar Imagens de Referência Existentes",
-                                                    "", # Diretório inicial (vazio usa o padrão)
-                                                    image_filters)
+        filepaths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Selecionar Imagens de Referência Existentes",
+            "",  # Diretório inicial (vazio usa o padrão)
+            image_filters,
+        )
 
-        if not filepaths: # Usuário cancelou o diálogo
+        if not filepaths:  # Usuário cancelou o diálogo
             return
 
         added_count = 0
         for original_filepath in filepaths:
             if not os.path.exists(original_filepath):
-                QMessageBox.warning(self, "Arquivo Não Encontrado", f"O arquivo selecionado não foi encontrado:\n{original_filepath}")
+                QMessageBox.warning(
+                    self,
+                    "Arquivo Não Encontrado",
+                    f"O arquivo selecionado não foi encontrado:\n{original_filepath}",
+                )
                 continue
 
             original_filename = os.path.basename(original_filepath)
@@ -594,7 +600,7 @@ class ReferenceManagerWidget(QWidget):
             # Sanitizar o nome base do arquivo
             sanitized_base_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', base_name.strip())
             if not sanitized_base_name:
-                sanitized_base_name = "imported_ref" # Fallback se o nome ficar vazio
+                sanitized_base_name = "imported_ref"  # Fallback se o nome ficar vazio
 
             # Garantir que a extensão seja .png para consistência interna, ou manter original se preferir
             # Por enquanto, vamos manter a extensão original, mas o ideal seria converter para PNG.
