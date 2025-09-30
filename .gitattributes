@@ -1,0 +1,38 @@
+# === Configuração de Line Endings ===
+* text=auto
+
+# === Arquivos de Texto ===
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.qss text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+
+# === Arquivos do Windows ===
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# === Arquivos Binários ===
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.gif binary
+*.bmp binary
+*.svg binary
+
+# === Python Notebooks ===
+*.ipynb text eol=lf
+
+# === Configuração ===
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# === Linguist (estatísticas do GitHub) ===
+# Ignorar arquivos de referência nas estatísticas
+switchpilot/references/*.png linguist-generated=true
+*.qss linguist-language=CSS

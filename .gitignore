@@ -1,23 +1,76 @@
-# Ignorar ambientes virtuais
+# === Python ===
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# === Ambientes Virtuais ===
 .venv/
 .venv310/
 env/
 venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Ignorar arquivos de build do PyInstaller
+# === PyInstaller ===
 build/
 dist/
+*.spec.backup
+*.manifest
+*.exe.manifest
 
-# Ignorar arquivos grandes e binários
+# === Arquivos Binários ===
 *.exe
 *.pkg
-*.pyd
 *.dll
 *.so
+*.dylib
+
+# === Releases e Distribuição ===
 *.zip
 *.tar.gz
-*.log
+*.rar
+*.7z
+release_*/
+releases/
 
-# Ignorar arquivos temporários do sistema
-*.pyc
-__pycache__/ 
+# === Logs e Temporários ===
+*.log
+*.txt.log
+*.out
+*.err
+run_*.txt
+run_*.log
+run_*.out
+
+# === Configurações Locais ===
+switchpilot_config.json
+*.pkl
+*.json.backup
+
+# === IDEs e Editores ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# === Testes e Debug ===
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# === Arquivos de Referência de Teste ===
+switchpilot/references/ref_*.png
+
+# === Sistema Operacional ===
+Thumbs.db
+Desktop.ini
+.DS_Store 

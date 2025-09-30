@@ -1,6 +1,29 @@
 [flake8]
+# Configuração do Flake8 para SwitchPilot
 max-line-length = 120
-exclude = .git,__pycache__,.venv,.venv310,env,venv,build,dist,archive
+max-complexity = 15
+
+# Pastas a ignorar
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    .venv310,
+    env,
+    venv,
+    build,
+    dist,
+    archive,
+    release_*,
+    *.egg-info
+
+# Ignorar alguns erros específicos
+ignore = 
+    E203,  # whitespace before ':'
+    W503,  # line break before binary operator
+    E501,  # line too long (já controlado por max-line-length)
+
+# Configurações por arquivo
 per-file-ignores =
-	# arquivos gerados ou de terceiros (se algum for rastreado futuramente)
-	# nenhum por enquanto
+    __init__.py:F401,F403  # imports não usados em __init__.py são OK
+    main.py:E402  # imports após código são OK no main
