@@ -28,7 +28,7 @@ Requisitos:
 - NDI é opcional
 
 ## Desenvolvimento
-- Python 3.10+
+- Python 3.10+ (recomendado 3.11+)
 - Ambiente virtual recomendado
 
 Instalação (dev):
