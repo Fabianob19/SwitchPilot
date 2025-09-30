@@ -1,10 +1,10 @@
 import sys
-import os # Adicionado para construir caminhos de tema
+import os  # Adicionado para construir caminhos de tema
 import json
 import shutil
 import ctypes
 from ctypes import wintypes
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QDockWidget, QWidget, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QDockWidget, QWidget,
                              QVBoxLayout, QLabel, QTextEdit, QMenuBar, QStatusBar, QAction, QSizePolicy, QActionGroup, QTabBar, QSystemTrayIcon, QMenu, QStyle, QPushButton, QFileDialog, QMessageBox, QDialog, QDialogButtonBox)
 from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QColor, QDesktopServices
 from PyQt5.QtCore import Qt, QFile, QTextStream, QDir, QRect, QSettings, QTimer, QUrl, QPoint
@@ -24,6 +24,8 @@ DEFAULT_WINDOW_X = 100
 DEFAULT_WINDOW_Y = 100
 
 # --- Utilitário: Dark Title Bar no Windows ---
+
+
 def enable_dark_title_bar_for_window(widget):
     try:
         if sys.platform != 'win32':
@@ -66,6 +68,7 @@ def enable_dark_title_bar_for_window(widget):
         # Silencioso: se falhar, apenas ignora (sem crash)
         pass
 
+
 def resource_path(relative_path):
     """Retorna o caminho absoluto para recursos, compatível com PyInstaller."""
     try:
@@ -74,6 +77,7 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
 
 class CaptureAreaOverlay(QWidget):
     def __init__(self, roi, kind, capture_id, parent=None):
@@ -109,11 +113,12 @@ class CaptureAreaOverlay(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        pen = QPen(QColor(255, 0, 0, 180)) # Vermelho semi-transparente
+        pen = QPen(QColor(255, 0, 0, 180))  # Vermelho semi-transparente
         pen.setWidth(4)
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
-        painter.drawRect(0, 0, self.width()-1, self.height()-1)
+        painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, version=None):
@@ -123,20 +128,20 @@ class MainWindow(QMainWindow):
         if self._version:
             title += f" - {self._version}"
         self.setWindowTitle(title)
-        
+
         # Carregar configurações da janela
         self._load_window_settings()
-        
-        self.setWindowIcon(QIcon(resource_path('ICONE.ico'))) # Ícone da Janela
 
-        self._is_quitting_via_tray = False # Flag para controlar o fechamento real
+        self.setWindowIcon(QIcon(resource_path('ICONE.ico')))  # Ícone da Janela
+
+        self._is_quitting_via_tray = False  # Flag para controlar o fechamento real
 
         # Carregar tema padrão inicial (ou o último salvo no futuro)
-        self.current_theme_name = THEME_VERY_DARK 
+        self.current_theme_name = THEME_VERY_DARK
         self._apply_theme_qss(self.current_theme_name)
         self._setup_ui()
-        self._create_tray_icon() # Configurar o ícone da bandeja
-        
+        self._create_tray_icon()  # Configurar o ícone da bandeja
+
         # Ativar barra de título escura (Windows 10/11)
         enable_dark_title_bar_for_window(self)
 
@@ -147,13 +152,13 @@ class MainWindow(QMainWindow):
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                    
+
                 window_config = config.get('window_settings', {})
                 x = window_config.get('x', DEFAULT_WINDOW_X)
                 y = window_config.get('y', DEFAULT_WINDOW_Y)
                 width = window_config.get('width', DEFAULT_WINDOW_WIDTH)
                 height = window_config.get('height', DEFAULT_WINDOW_HEIGHT)
-                
+
                 # Validar valores para evitar janela fora da tela
                 if width < 400:
                     width = DEFAULT_WINDOW_WIDTH
@@ -163,7 +168,7 @@ class MainWindow(QMainWindow):
                     x = DEFAULT_WINDOW_X
                 if y < 0:
                     y = DEFAULT_WINDOW_Y
-                    
+
                 self.setGeometry(x, y, width, height)
                 print(f"Configurações da janela carregadas: {width}x{height} na posição ({x}, {y})")
             else:
@@ -180,12 +185,12 @@ class MainWindow(QMainWindow):
         try:
             config_path = "switchpilot_config.json"
             config = {}
-            
+
             # Carregar configurações existentes
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-            
+
             # Atualizar configurações da janela
             geometry = self.geometry()
             config['window_settings'] = {
@@ -194,31 +199,31 @@ class MainWindow(QMainWindow):
                 'width': geometry.width(),
                 'height': geometry.height()
             }
-            
+
             # Salvar de volta
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
-                
+
             print(f"Configurações da janela salvas: {geometry.width()}x{geometry.height()} na posição ({geometry.x()}, {geometry.y()})")
         except Exception as e:
             print(f"Erro ao salvar configurações da janela: {e}")
 
     def _create_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
-        
+
         icon_path = resource_path('ICONE.ico')
         if not os.path.exists(icon_path):
             print(f"Alerta: Ícone da bandeja não encontrado em {icon_path}. Usando ícone padrão do sistema.")
             # Tenta usar um ícone padrão do estilo atual do sistema se o arquivo não for encontrado
-            standard_icon = self.style().standardIcon(QStyle.SP_ComputerIcon) # Exemplo, pode ser outro
+            standard_icon = self.style().standardIcon(QStyle.SP_ComputerIcon)  # Exemplo, pode ser outro
             self.tray_icon.setIcon(standard_icon)
         else:
             self.tray_icon.setIcon(QIcon(icon_path))
 
         self.tray_icon.setToolTip("SwitchPilot")
 
-        tray_menu = QMenu(self) # Parent para garantir que o menu seja coletado pelo garbage collector
-        
+        tray_menu = QMenu(self)  # Parent para garantir que o menu seja coletado pelo garbage collector
+
         self.toggle_visibility_action = QAction("Restaurar", self)
         self.toggle_visibility_action.triggered.connect(self._toggle_visibility)
         tray_menu.addAction(self.toggle_visibility_action)
@@ -236,7 +241,7 @@ class MainWindow(QMainWindow):
     def _on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
             self._toggle_visibility()
-        elif reason == QSystemTrayIcon.Trigger: # Clique simples
+        elif reason == QSystemTrayIcon.Trigger:  # Clique simples
             # Poderia abrir o menu aqui também, ou fazer outra ação.
             # Por enquanto, o clique simples não fará nada além do menu de contexto já disponível.
             pass
@@ -253,13 +258,13 @@ class MainWindow(QMainWindow):
             )
         else:
             self.showNormal()
-            self.activateWindow() # Garante que a janela venha para frente
+            self.activateWindow()  # Garante que a janela venha para frente
             self.raise_()      # Para macOS e alguns WMs Linux
             self.toggle_visibility_action.setText("Minimizar para Bandeja")
 
     def _quit_application(self):
         self._is_quitting_via_tray = True
-        self.tray_icon.hide() # Ocultar o ícone antes de sair
+        self.tray_icon.hide()  # Ocultar o ícone antes de sair
         QApplication.instance().quit()
 
     def closeEvent(self, event):
@@ -270,17 +275,17 @@ class MainWindow(QMainWindow):
                 if hasattr(self.main_controller, 'stop_monitoring_if_running'):
                     print("Parando monitoramento antes de sair...")
                     self.main_controller.stop_monitoring_if_running()
-            
+
             # Salvar configurações da janela antes de sair
             self._save_window_settings()
-            
+
             # Salvar configurações, etc.
             print("Saindo da aplicação...")
             super().closeEvent(event)
         else:
             # Se o usuário clicou no "X" da janela, minimizamos para a bandeja.
             event.ignore()
-            self._toggle_visibility() # Reutiliza a lógica de minimizar e mostrar mensagem
+            self._toggle_visibility()  # Reutiliza a lógica de minimizar e mostrar mensagem
 
     def resizeEvent(self, event):
         """Salva configurações da janela quando redimensionada"""
@@ -351,7 +356,7 @@ class MainWindow(QMainWindow):
         self._custom_menubar.setObjectName("TopMenuBar")
         file_menu = self._custom_menubar.addMenu("&Arquivo")
         view_menu = self._custom_menubar.addMenu("&Visualizar")
-        
+
         # --- Menu Configurações e Aparência ---
         settings_menu = self._custom_menubar.addMenu("&Configurações")
         appearance_menu = settings_menu.addMenu("&Aparência")
@@ -362,14 +367,14 @@ class MainWindow(QMainWindow):
         settings_menu.addAction(self.thresholds_action)
         settings_menu.addSeparator()
 
-        theme_action_group = QActionGroup(self) # Para garantir que apenas um tema seja "checado"
+        theme_action_group = QActionGroup(self)  # Para garantir que apenas um tema seja "checado"
         theme_action_group.setExclusive(True)
 
         def create_theme_action(theme_name):
             action = QAction(theme_name, self, checkable=True)
             action.triggered.connect(lambda checked, tn=theme_name: self._on_theme_selected(tn) if checked else None)
             if theme_name == self.current_theme_name:
-                 action.setChecked(True)
+                action.setChecked(True)
             theme_action_group.addAction(action)
             appearance_menu.addAction(action)
             return action
@@ -378,7 +383,7 @@ class MainWindow(QMainWindow):
         self.theme_dark_default_action = create_theme_action(THEME_DARK_DEFAULT)
         self.theme_very_dark_action = create_theme_action(THEME_VERY_DARK)
         # --- Fim Menu Configurações e Aparência ---
-        
+
         help_menu = self._custom_menubar.addMenu("A&juda")
 
         # Itens de Arquivo
@@ -431,7 +436,7 @@ class MainWindow(QMainWindow):
             self.setMenuWidget(container)
         except Exception as e:
             print(f"[WARN] Falha ao aplicar barra personalizada: {e}")
-        
+
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowNestedDocks | QMainWindow.AllowTabbedDocks)
 
         obs_config_dock = QDockWidget("Configuração OBS", self)
@@ -455,10 +460,10 @@ class MainWindow(QMainWindow):
             # que é um QTabBar. Vamos procurar por QTabBar que são filhos diretos
             # de um contêiner de dock ou da própria QMainWindow.
             # Isso pode ser um pouco frágil dependendo da implementação interna do Qt.
-            
+
             found_dock_tab_bar = False
             # É importante importar QTabBar se ainda não estiver no escopo local
-            from PyQt5.QtWidgets import QTabBar 
+            from PyQt5.QtWidgets import QTabBar
 
             for tab_bar in self.findChildren(QTabBar):
                 parent_widget = tab_bar.parentWidget()
@@ -473,7 +478,7 @@ class MainWindow(QMainWindow):
                     # A classe 'DockAreaTabBar' também é interna.
                     # Uma heurística é verificar se o pai NÃO é um QTabWidget (para não pegar tab bars de QTabWidgets comuns)
                     # e se o tab_bar está diretamente sob a QMainWindow ou um widget genérico que serve de container para docks.
-                    if not isinstance(parent_widget, QTextEdit) and not isinstance(parent_widget, QLabel): # Evitar pegar QTabBar de widgets que não são containers de dock
+                    if not isinstance(parent_widget, QTextEdit) and not isinstance(parent_widget, QLabel):  # Evitar pegar QTabBar de widgets que não são containers de dock
                         # Se o parent_widget for um QDockWidget, significa que o QTabBar é o título do próprio dock,
                         # o que não é o que queremos aqui (já é estilizado por QDockWidget::title).
                         # O QTabBar que gerencia múltiplos docks agrupados geralmente não tem um QDockWidget como pai direto.
@@ -491,13 +496,13 @@ class MainWindow(QMainWindow):
                             # deve haver um QTabBar gerenciando estas duas abas.
 
                             # Verificando os filhos da QMainWindow
-                            if parent_widget == self or parent_widget.parentWidget() == self: # Um pouco mais direto
+                            if parent_widget == self or parent_widget.parentWidget() == self:  # Um pouco mais direto
                                 tab_bar.setObjectName("CentralDockTabBar")
                                 print(f"DEBUG: QTabBar dos docks (possivelmente) encontrado e nomeado 'CentralDockTabBar': {tab_bar} com pai {parent_widget}")
-                                self._apply_theme_qss(self.current_theme_name) 
+                                self._apply_theme_qss(self.current_theme_name)
                                 found_dock_tab_bar = True
-                                break 
-                            else: # Tentar uma busca mais genérica se a anterior falhar
+                                break
+                            else:  # Tentar uma busca mais genérica se a anterior falhar
                                 # Se o QTabBar não tem um QTabWidget como pai, é um bom candidato
                                 if tab_bar.parentWidget() and tab_bar.parentWidget().metaObject().className() != "QTabWidget":
                                     tab_bar.setObjectName("CentralDockTabBar")
@@ -506,23 +511,21 @@ class MainWindow(QMainWindow):
                                     found_dock_tab_bar = True
                                     break
 
-
             if not found_dock_tab_bar:
                 print("DEBUG: QTabBar dos docks não foi encontrado programaticamente com as heurísticas atuais.")
 
         except Exception as e:
             print(f"DEBUG: Erro ao tentar encontrar/nomear QTabBar dos docks: {e}")
 
-
         self.reference_manager_dock_widget = QDockWidget("Gerenciador de Referências", self)
         self.reference_manager_widget = ReferenceManagerWidget(main_controller=None)
         self.reference_manager_dock_widget.setWidget(self.reference_manager_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.reference_manager_dock_widget)
         view_menu.addAction(self.reference_manager_dock_widget.toggleViewAction())
-        
+
         self.monitoring_control_dock_panel = QDockWidget("Monitoramento & Controle", self)
         self.monitoring_control_dock_panel.setObjectName("monitoringControlDock")
-        self.monitoring_control_widget = MonitoringControlWidget(self.monitoring_control_dock_panel) 
+        self.monitoring_control_widget = MonitoringControlWidget(self.monitoring_control_dock_panel)
         self.monitoring_control_dock_panel.setWidget(self.monitoring_control_widget)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.monitoring_control_dock_panel)
         view_menu.addAction(self.monitoring_control_dock_panel.toggleViewAction())
@@ -573,17 +576,17 @@ class MainWindow(QMainWindow):
                 self.theme_dark_default_action.setChecked(True)
             elif self.current_theme_name == THEME_VERY_DARK:
                 self.theme_very_dark_action.setChecked(True)
-        
+
     def set_main_controller_for_widgets(self, main_controller):
         self.main_controller = main_controller  # <--- ESSENCIAL para funcionamento dos slots!
         if hasattr(self.reference_manager_widget, 'set_main_controller'):
             self.reference_manager_widget.set_main_controller(main_controller)
         if hasattr(self.obs_config_widget, 'set_main_controller'):
-             self.obs_config_widget.set_main_controller(main_controller)
+            self.obs_config_widget.set_main_controller(main_controller)
         if hasattr(self.vmix_config_widget, 'set_main_controller'):
-             self.vmix_config_widget.set_main_controller(main_controller)
+            self.vmix_config_widget.set_main_controller(main_controller)
         if hasattr(self.monitoring_control_widget, 'set_main_controller'):
-             self.monitoring_control_widget.set_main_controller(main_controller)
+            self.monitoring_control_widget.set_main_controller(main_controller)
 
     def _open_thresholds_dialog(self):
         # Pega os valores atuais do MainController se possível
@@ -597,6 +600,7 @@ class MainWindow(QMainWindow):
         dialog = ThresholdConfigDialog(static_value=static_val, sequence_value=seq_val, interval_value=interval_val, parent=self)
         # Conectar o sinal para atualizar os limiares imediatamente ao clicar OK
         print("[DEBUG] Conectando sinal thresholds_updated do diálogo ao slot on_thresholds_updated")
+
         def on_thresholds_updated(static_new, seq_new, interval_new):
             print(f"[DEBUG] Sinal thresholds_updated recebido: static={static_new}, seq={seq_new}, interval={interval_new}")
             if hasattr(self, 'main_controller') and self.main_controller:
@@ -730,14 +734,22 @@ class MainWindow(QMainWindow):
                     pos = self.mapFromGlobal(QPoint(int(ctypes.c_short(msg.lParam & 0xFFFF).value), int(ctypes.c_short((msg.lParam >> 16) & 0xFFFF).value)))
                     x, y, w, h = pos.x(), pos.y(), self.width(), self.height()
                     margin = 6
-                    if x < margin and y < margin: return True, 13  # HTTOPLEFT
-                    if x > w - margin and y < margin: return True, 14  # HTTOPRIGHT
-                    if x < margin and y > h - margin: return True, 16  # HTBOTTOMLEFT
-                    if x > w - margin and y > h - margin: return True, 17  # HTBOTTOMRIGHT
-                    if y < margin: return True, 12  # HTTOP
-                    if y > h - margin: return True, 15  # HTBOTTOM
-                    if x < margin: return True, 10  # HTLEFT
-                    if x > w - margin: return True, 11  # HTRIGHT
+                    if x < margin and y < margin:
+                        return True, 13  # HTTOPLEFT
+                    if x > w - margin and y < margin:
+                        return True, 14  # HTTOPRIGHT
+                    if x < margin and y > h - margin:
+                        return True, 16  # HTBOTTOMLEFT
+                    if x > w - margin and y > h - margin:
+                        return True, 17  # HTBOTTOMRIGHT
+                    if y < margin:
+                        return True, 12  # HTTOP
+                    if y > h - margin:
+                        return True, 15  # HTBOTTOM
+                    if x < margin:
+                        return True, 10  # HTLEFT
+                    if x > w - margin:
+                        return True, 11  # HTRIGHT
                     # Área de arrasto: barra personalizada, exceto sobre botões
                     if hasattr(self, '_custom_title_bar') and self._custom_title_bar:
                         bar = self._custom_title_bar
@@ -756,12 +768,13 @@ class MainWindow(QMainWindow):
             pass
         return super().nativeEvent(eventType, message)
 
+
 # Para teste rápido
 if __name__ == '__main__':
     app = QApplication.instance()
     if not app:
         app = QApplication(sys.argv)
-    
+
     # Criar arquivos QSS de placeholder se não existirem para teste
     themes_dir = "switchpilot/ui/themes"
     os.makedirs(themes_dir, exist_ok=True)
@@ -780,9 +793,9 @@ if __name__ == '__main__':
     )
 
     qss_files_to_check = {
-        os.path.join(themes_dir, "modern_light.qss"): placeholder_qss_content.replace("#cccccc", "#f0f0f0").replace("#aaaaaa", "#d0d0d0"), # Light theme
+        os.path.join(themes_dir, "modern_light.qss"): placeholder_qss_content.replace("#cccccc", "#f0f0f0").replace("#aaaaaa", "#d0d0d0"),  # Light theme
         os.path.join(themes_dir, "modern_dark_obs.qss"): default_dark_qss_content,
-        os.path.join(themes_dir, "modern_very_dark.qss"): placeholder_qss_content.replace("#cccccc", "#1a1a1a").replace("#aaaaaa", "#101010").replace("black", "white") # Very dark theme
+        os.path.join(themes_dir, "modern_very_dark.qss"): placeholder_qss_content.replace("#cccccc", "#1a1a1a").replace("#aaaaaa", "#101010").replace("black", "white")  # Very dark theme
     }
 
     for qss_file_path, content in qss_files_to_check.items():
@@ -796,17 +809,18 @@ if __name__ == '__main__':
 
     main_win = MainWindow()
     main_win.show()
-    
+
     class MockMainController:
         def __init__(self):
-            self.obs_controller = None 
-            self.vmix_controller = None 
+            self.obs_controller = None
+            self.vmix_controller = None
             print("MockMainController instanciado para teste da UI.")
+
         def check_obs_connection(self): print("Mock OBS check"); return False, "Não conectado"
         def check_vmix_connection(self): print("Mock vMix check"); return False, "Não conectado"
 
     mock_controller = MockMainController()
     main_win.set_main_controller_for_widgets(mock_controller)
-    
+
     if app is QApplication.instance() and sys.argv[0] == __file__ and not hasattr(sys, 'frozen'):
-         sys.exit(app.exec_()) 
+        sys.exit(app.exec_())

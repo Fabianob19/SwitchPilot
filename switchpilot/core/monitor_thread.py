@@ -3,37 +3,38 @@ import cv2
 import mss
 import numpy as np
 import time
-import os # Adicionado para os.path.basename em logs futuros
+import os  # Adicionado para os.path.basename em logs futuros
 
 # Será necessário adicionar a lógica de descrever_acao aqui ou no MainController
 # Por enquanto, vamos focar na estrutura da thread.
 
+
 class MonitorThread(QThread):
     log_signal = pyqtSignal(str, str)  # mensagem, nivel (info, error, success, warning, debug)
-    status_signal = pyqtSignal(str) # status para a label principal
+    status_signal = pyqtSignal(str)  # status para a label principal
     # Poderíamos ter um sinal mais específico para quando uma ação é executada
     # action_triggered_signal = pyqtSignal(dict, dict) # matched_reference_data, action_data
 
-    def __init__(self, references_data, pgm_details, action_executor_callback, 
+    def __init__(self, references_data, pgm_details, action_executor_callback,
                  initial_static_threshold=0.90, initial_sequence_threshold=0.90, initial_monitor_interval=0.5, parent=None):
         super().__init__(parent)
         # Emitir log aqui para verificar o que foi recebido
         # Temporariamente, vamos usar print direto caso log_signal não esteja pronto ou haja problema com QObject em __init__ antes de mover para a thread certa
-        print(f"[MonitorThread __init__] Recebido references_data: {references_data}") 
+        print(f"[MonitorThread __init__] Recebido references_data: {references_data}")
         # Se quiser usar log_signal, precisaria de um jeito de emiti-lo de forma segura aqui ou logo no início do run.
         # Para simplificar o debug imediato, print pode ser mais direto.
 
-        self.references_data = list(references_data) # Garantir que é uma cópia e uma lista
+        self.references_data = list(references_data)  # Garantir que é uma cópia e uma lista
         self.pgm_details = pgm_details
-        self.action_executor_callback = action_executor_callback # Função do MainController para executar ações
-        
+        self.action_executor_callback = action_executor_callback  # Função do MainController para executar ações
+
         self.running = False
-        self.monitor_interval = initial_monitor_interval # Intervalo entre verificações em segundos (agora configurável)
-        
+        self.monitor_interval = initial_monitor_interval  # Intervalo entre verificações em segundos (agora configurável)
+
         # Configurações para comparação de imagem (podem ser ajustadas/configuráveis)
         self.similarity_threshold_static = initial_static_threshold
         self.similarity_threshold_sequence_frame = initial_sequence_threshold
-        
+
         # Para comparação por histograma (se usada)
         self.hist_size = [32]  # reduzido para performance
         self.hist_ranges = [0, 256]
@@ -53,8 +54,8 @@ class MonitorThread(QThread):
 
         # Adicionar log após copiar para self.references_data
         print(f"[MonitorThread __init__] self.references_data inicializado com: {self.references_data}")
-        print(f"[MonitorThread __init__] Limiar Estático Inicial: {self.similarity_threshold_static}") # NOVO PRINT
-        print(f"[MonitorThread __init__] Limiar Sequência Inicial: {self.similarity_threshold_sequence_frame}") # NOVO PRINT
+        print(f"[MonitorThread __init__] Limiar Estático Inicial: {self.similarity_threshold_static}")  # NOVO PRINT
+        print(f"[MonitorThread __init__] Limiar Sequência Inicial: {self.similarity_threshold_sequence_frame}")  # NOVO PRINT
 
     def set_static_threshold(self, threshold):
         if 0.0 <= threshold <= 1.0:
@@ -102,7 +103,7 @@ class MonitorThread(QThread):
             elif action_type == 'Alternar Mudo (Fonte de Áudio)':
                 return f"{desc}: Fonte de áudio '{params.get('input_name', 'N/A')}'"
             # Adicionar outras descrições OBS conforme necessário
-        
+
         elif integration == "vMix":
             if action_type == 'Function (Genérico)':
                 func_name = params.get('function_name', 'N/A')
@@ -110,9 +111,12 @@ class MonitorThread(QThread):
                 val = params.get('value')
                 dur = params.get('duration')
                 parts = [f"Função: {func_name}"]
-                if inp: parts.append(f"Input: {inp}")
-                if val: parts.append(f"Valor: {val}")
-                if dur: parts.append(f"Duração: {dur}")
+                if inp:
+                    parts.append(f"Input: {inp}")
+                if val:
+                    parts.append(f"Valor: {val}")
+                if dur:
+                    parts.append(f"Duração: {dur}")
                 return f"{desc} ({', '.join(parts)})"
             elif action_type == 'SetText':
                 return f"{desc}: Input '{params.get('input', 'N/A')}', Campo '{params.get('selected_name', 'N/A')}', Valor '{params.get('text_value', '')[:20]}...'"
@@ -120,27 +124,30 @@ class MonitorThread(QThread):
                 inp = params.get('input')
                 dur = params.get('duration') if action_type == 'Fade' else None
                 parts = []
-                if inp: parts.append(f"Input: {inp}")
-                if dur: parts.append(f"Duração: {dur}ms")
+                if inp:
+                    parts.append(f"Input: {inp}")
+                if dur:
+                    parts.append(f"Duração: {dur}ms")
                 return f"{desc} ({', '.join(parts) if parts else 'Preview/Program'})"
             elif action_type == 'OverlayInputIn' or action_type == 'OverlayInputOut':
                 channel = params.get('overlay_channel', 'N/A')
                 inp = params.get('input') if action_type == 'OverlayInputIn' else None
                 parts = [f"Canal: {channel}"]
-                if inp: parts.append(f"Input: {inp}")
+                if inp:
+                    parts.append(f"Input: {inp}")
                 return f"{desc} ({', '.join(parts)})"
             # Adicionar outras descrições vMix
 
         # Para ações sem parâmetros detalhados ou tipos simples
-        simple_actions = ["Iniciar Gravação", "Parar Gravação", "Iniciar Streaming", "Parar Streaming", 
+        simple_actions = ["Iniciar Gravação", "Parar Gravação", "Iniciar Streaming", "Parar Streaming",
                           "StartRecording", "StopRecording"]
         if action_type in simple_actions:
-            return desc # A descrição já é o tipo de ação
+            return desc  # A descrição já é o tipo de ação
 
         # Fallback para outros casos
         param_summary = []
         for k, v in params.items():
-            param_summary.append(f"{k}='{str(v)[:20]}'") # Limitar tamanho do valor
+            param_summary.append(f"{k}='{str(v)[:20]}'")  # Limitar tamanho do valor
         if param_summary:
             return f"{desc} ({', '.join(param_summary)})"
         return desc
@@ -171,20 +178,20 @@ class MonitorThread(QThread):
         # if ref_gray.shape != frame_gray.shape:
         #     frame_gray = cv2.resize(frame_gray, (ref_gray.shape[1], ref_gray.shape[0]), interpolation=cv2.INTER_LINEAR)
         # res = cv2.matchTemplate(frame_gray, ref_gray, cv2.TM_CCOEFF_NORMED)
-        
+
         # Downscaling para tamanho fixo de 128x128 pixels
         # INTER_AREA: melhor qualidade para redução de imagens
         target_size = 128
         ref_small = cv2.resize(ref_gray, (target_size, target_size), interpolation=cv2.INTER_AREA)
         frame_small = cv2.resize(frame_gray, (target_size, target_size), interpolation=cv2.INTER_AREA)
-        
+
         # Template matching com imagens redimensionadas
         try:
             res = cv2.matchTemplate(frame_small, ref_small, cv2.TM_CCOEFF_NORMED)
             ncc = float(res.max()) if res.size > 0 else -1.0
         except Exception:
             ncc = -1.0
-        
+
         return max(0.0, min(1.0, (ncc + 1.0) / 2.0))
 
     def _lbp_hist(self, gray_img):
@@ -200,12 +207,12 @@ class MonitorThread(QThread):
         neighbors = [
             (img[:-2, :-2], 1),   # top-left (bit 0)
             (img[:-2, 1:-1], 2),  # top (bit 1)
-            (img[:-2, 2: ], 4),   # top-right (bit 2)
+            (img[:-2, 2:], 4),   # top-right (bit 2)
             (img[1:-1, :-2], 8),  # left (bit 3)
-            (img[1:-1, 2: ], 16), # right (bit 4)
-            (img[2:  , :-2], 32), # bottom-left (bit 5)
-            (img[2:  , 1:-1], 64),# bottom (bit 6)
-            (img[2:  , 2: ], 128) # bottom-right (bit 7)
+            (img[1:-1, 2:], 16),  # right (bit 4)
+            (img[2: , :-2], 32),  # bottom-left (bit 5)
+            (img[2: , 1:-1], 64),  # bottom (bit 6)
+            (img[2: , 2:], 128)  # bottom-right (bit 7)
         ]
         for neigh, bit in neighbors:
             codes |= ((neigh >= center).astype(np.uint8) * bit)
@@ -236,8 +243,8 @@ class MonitorThread(QThread):
     def _combined_similarity(self, ref_gray_ds, frame_gray_ds):
         # Calcular componentes
         s_hist = self._compute_hist_score(ref_gray_ds, frame_gray_ds)
-        s_ncc  = self._compute_ncc_score(ref_gray_ds, frame_gray_ds)
-        s_lbp  = self._compute_lbp_score(ref_gray_ds, frame_gray_ds)
+        s_ncc = self._compute_ncc_score(ref_gray_ds, frame_gray_ds)
+        s_lbp = self._compute_lbp_score(ref_gray_ds, frame_gray_ds)
         s = self.weight_hist * s_hist + self.weight_ncc * s_ncc + self.weight_lbp * s_lbp
         self.log_signal.emit(f"Scores -> Hist:{s_hist:.3f} NCC:{s_ncc:.3f} LBP:{s_lbp:.3f} | S:{s:.3f}", "debug")
         return s
@@ -290,7 +297,7 @@ class MonitorThread(QThread):
         # Detalhes da captura PGM
         roi_x, roi_y, roi_w, roi_h = self.pgm_details['roi']
         capture_kind = self.pgm_details['kind']
-        capture_id = self.pgm_details['id'] # monitor_idx ou window_obj
+        capture_id = self.pgm_details['id']  # monitor_idx ou window_obj
 
         with mss.mss() as sct:
             while self.running:
@@ -300,9 +307,9 @@ class MonitorThread(QThread):
                 try:
                     if capture_kind == 'monitor':
                         monitor_capture_details = sct.monitors[capture_id]
-                        grab_area = {"top": monitor_capture_details["top"] + roi_y, 
-                                     "left": monitor_capture_details["left"] + roi_x, 
-                                     "width": roi_w, "height": roi_h, 
+                        grab_area = {"top": monitor_capture_details["top"] + roi_y,
+                                     "left": monitor_capture_details["left"] + roi_x,
+                                     "width": roi_w, "height": roi_h,
                                      "mon": capture_id}
                         sct_img = sct.grab(grab_area)
                         img_np = np.array(sct_img)
@@ -313,9 +320,9 @@ class MonitorThread(QThread):
                             self.log_signal.emit(f"Janela '{window_obj.title if window_obj else 'N/A'}' não está mais válida ou visível. Pausando captura temporariamente.", "warning")
                             time.sleep(self.monitor_interval * 2)
                             continue
-                        capture_region_global = (window_obj.left + roi_x, 
-                                                 window_obj.top + roi_y, 
-                                                 roi_w, 
+                        capture_region_global = (window_obj.left + roi_x,
+                                                 window_obj.top + roi_y,
+                                                 roi_w,
                                                  roi_h)
                         import pyautogui
                         pil_img = pyautogui.screenshot(region=capture_region_global)
@@ -423,4 +430,3 @@ class MonitorThread(QThread):
     def stop(self):
         self.log_signal.emit("Sinal de parada recebido pela thread de monitoramento.", "info")
         self.running = False
-

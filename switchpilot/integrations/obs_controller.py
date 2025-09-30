@@ -3,14 +3,15 @@ import json
 import uuid
 import base64
 import hashlib
-from PyQt5.QtCore import QSettings # Para ler a senha como no código original por enquanto
-import time # Adicionado para os sleeps nos testes
+from PyQt5.QtCore import QSettings  # Para ler a senha como no código original por enquanto
+import time  # Adicionado para os sleeps nos testes
+
 
 class OBSController:
     def __init__(self, host='localhost', port='4455', password=''):
         self.host = host
         self.port = port
-        self.password = password # Senha fornecida na inicialização
+        self.password = password  # Senha fornecida na inicialização
         self.log_callback = None
         self.ws = None  # conexão persistente (criada sob demanda)
         self._scene_item_id_cache = {}  # (scene_name, source_name) -> sceneItemId
@@ -29,9 +30,9 @@ class OBSController:
         """Retorna a senha de self.password. Loga aviso se vazia."""
         if self.password:
             return self.password
-        
+
         self._log("Nenhuma senha OBS fornecida diretamente ao OBSController.", "warning")
-        return '' # Retorna string vazia se self.password não foi setada
+        return ''  # Retorna string vazia se self.password não foi setada
 
     def _authenticate(self, ws_instance):
         """Autentica no OBS WebSocket 5.x. Retorna True se bem-sucedido, False caso contrário."""
@@ -55,23 +56,23 @@ class OBSController:
                 else:
                     challenge = auth_data_from_hello['challenge']
                     salt = auth_data_from_hello['salt']
-                    
+
                     secret_bytes = (password_to_use + salt).encode('utf-8')
                     secret_hash = hashlib.sha256(secret_bytes).digest()
                     secret_b64 = base64.b64encode(secret_hash).decode('utf-8')
-                    
+
                     auth_response_bytes = (secret_b64 + challenge).encode('utf-8')
                     auth_response_hash = hashlib.sha256(auth_response_bytes).digest()
                     auth_response_b64 = base64.b64encode(auth_response_hash).decode('utf-8')
-                    
+
                     identify_payload["d"]["authentication"] = auth_response_b64
                     self._log("String de autenticação gerada e adicionada ao IDENTIFY.", "debug")
             else:
                 self._log("OBS HELLO não contém challenge/salt, ou authenticationRequired é false/ausente. Procedendo sem enviar authentication string.", "debug")
-            
+
             ws_instance.send(json.dumps(identify_payload))
             self._log(f"OBS IDENTIFY enviado: {json.dumps(identify_payload)}", "debug")
-            
+
             resp_identified = ws_instance.recv()
             self._log(f"OBS IDENTIFIED recebido: {resp_identified}", "debug")
             data_identified = json.loads(resp_identified)
@@ -215,16 +216,17 @@ class OBSController:
             self._log(f"OBS (_send_request): Conectando a ws://{self.host}:{self.port}", "debug")
             ws = websocket.create_connection(f"ws://{self.host}:{self.port}", timeout=3)
             self._log(f"OBS (_send_request): Conexão WebSocket criada.", "debug")
-            
+
             if not self._authenticate(ws):
-                self._log("OBS (_send_request): Autenticação FALHOU. Retornando None.", "error") 
-                if ws: ws.close()
-                return None 
+                self._log("OBS (_send_request): Autenticação FALHOU. Retornando None.", "error")
+                if ws:
+                    ws.close()
+                return None
             self._log(f"OBS (_send_request): Autenticação bem-sucedida.", "debug")
 
             request_id = str(uuid.uuid4())
             payload = {
-                "op": 6, 
+                "op": 6,
                 "d": {
                     "requestType": request_type,
                     "requestId": request_id,
@@ -234,50 +236,50 @@ class OBSController:
             self._log(f"OBS (_send_request): Enviando payload: {json.dumps(payload)}", "debug")
             ws.send(json.dumps(payload))
             self._log(f"OBS REQUISIÇÃO ({request_type}) enviada (payload acima). Esperando resposta...", "debug")
-            
+
             # Loop para aguardar a resposta correta, ignorando eventos
             operation_timeout_seconds = 5.0  # Timeout para esperar a resposta específica
             deadline = time.time() + operation_timeout_seconds
-            response_str = "" # Inicializar para o caso de erro antes da atribuição
+            response_str = ""  # Inicializar para o caso de erro antes da atribuição
 
             while time.time() < deadline:
                 try:
-                    response_str = ws.recv() 
-                    self._log(f"OBS (_send_request): Resposta BRUTA recebida: {response_str[:250]}...", "debug") # Log um pouco maior
-                    
+                    response_str = ws.recv()
+                    self._log(f"OBS (_send_request): Resposta BRUTA recebida: {response_str[:250]}...", "debug")  # Log um pouco maior
+
                     parsed_response = json.loads(response_str)
                     op_code = parsed_response.get("op")
 
-                    if op_code == 7: # RequestResponse
+                    if op_code == 7:  # RequestResponse
                         if parsed_response.get("d", {}).get("requestId") == request_id:
                             self._log(f"OBS (_send_request): Resposta op:7 com requestId ({request_id}) correspondente recebida.", "debug")
                             # Não fechar ws aqui, o finally fará isso ao retornar.
-                            return parsed_response 
+                            return parsed_response
                         else:
                             self._log(f"OBS (_send_request): Resposta op:7 com requestId diferente. Esperado: {request_id}, Recebido: {parsed_response.get('d', {}).get('requestId')}. Ignorando.", "warning")
                             # Continuar no loop while para esperar a resposta correta ou timeout
-                    elif op_code == 5: # Event
+                    elif op_code == 5:  # Event
                         self._log(f"OBS (_send_request): Evento op:5 (type: {parsed_response.get('d', {}).get('eventType')}) recebido e ignorado enquanto esperava reqId {request_id}.", "debug")
                         # Continuar no loop while
-                    elif op_code == 0: # Hello (não deveria acontecer depois da autenticação)
+                    elif op_code == 0:  # Hello (não deveria acontecer depois da autenticação)
                         self._log(f"OBS (_send_request): Mensagem Hello (op:0) recebida inesperadamente enquanto esperava reqId {request_id}. Ignorando.", "warning")
-                    elif op_code == 2: # Identified (não deveria acontecer depois da autenticação)
+                    elif op_code == 2:  # Identified (não deveria acontecer depois da autenticação)
                         self._log(f"OBS (_send_request): Mensagem Identified (op:2) recebida inesperadamente enquanto esperava reqId {request_id}. Ignorando.", "warning")
                     else:
                         self._log(f"OBS (_send_request): op_code {op_code} inesperado recebido. Ignorando. Resposta: {parsed_response}", "warning")
-                
-                except websocket.WebSocketTimeoutException as e_timeout: 
+
+                except websocket.WebSocketTimeoutException as e_timeout:
                     self._log(f"OBS (_send_request): WebSocketTimeoutException no recv() para reqId {request_id}: {e_timeout}. Continuando a tentar até o deadline.", "warning")
-                    if time.time() >= deadline: 
+                    if time.time() >= deadline:
                         break
                     continue
                 except json.JSONDecodeError as e_json:
-                    raw_response_for_log = response_str if response_str else "N/A" 
+                    raw_response_for_log = response_str if response_str else "N/A"
                     self._log(f"Erro ao decodificar JSON da resposta OBS em _send_request (loop) para reqId {request_id}: {e_json}. Resposta bruta: '{raw_response_for_log[:250]}...'.", "error")
                 except websocket.WebSocketConnectionClosedException as e_closed:
                     self._log(f"OBS (_send_request): Conexão WebSocket fechada inesperadamente (reqId {request_id}): {e_closed}", "error")
                     return None
-                except Exception as e_recv: 
+                except Exception as e_recv:
                     self._log(f"OBS (_send_request): Exceção no recv() (loop) para reqId {request_id}: {e_recv}. Resposta: {response_str[:250] if response_str else 'N/A'}...", "error")
                     return None
 
@@ -286,15 +288,18 @@ class OBSController:
 
         except websocket.WebSocketBadStatusException as e_bad_status:
             self._log(f"Erro de status ao conectar/enviar para OBS em ws://{self.host}:{self.port}: {e_bad_status}", "error")
-            if ws: ws.close()
+            if ws:
+                ws.close()
             return None
         except ConnectionRefusedError:
             self._log(f"Conexão recusada pelo OBS em ws://{self.host}:{self.port} (dentro de _send_request). OBS aberto e WebSocket ativo? Retornando None.", "error")
-            if ws: ws.close()
+            if ws:
+                ws.close()
             return None
         except Exception as e:
             self._log(f"Erro genérico em _send_request para '{request_type}': {e}. Retornando None.", "error")
-            if ws: ws.close()
+            if ws:
+                ws.close()
             return None
 
     # --- Métodos de Ação Específicos ---
@@ -310,7 +315,7 @@ class OBSController:
     def start_record(self):
         self._log("OBS: Solicitando iniciar gravação...", "info")
         response = self._send_request("StartRecord")
-        if response and response.get('op') == 7: 
+        if response and response.get('op') == 7:
             status_data = response.get('d', {}).get('requestStatus', {})
             if status_data.get('code') == 100:
                 self._log("OBS: Gravação iniciada com sucesso.", "info")
@@ -424,7 +429,7 @@ class OBSController:
             muted_state = response.get('d', {}).get('responseData', {}).get('inputMuted', None)
             if muted_state is not None:
                 self._log(f"OBS: Mudo para '{input_name}' alternado. Novo estado: {'Mutado' if muted_state else 'Não Mutado'}.", "info")
-            else: # Sucesso, mas não obteve o estado
+            else:  # Sucesso, mas não obteve o estado
                 self._log(f"OBS: Mudo para '{input_name}' alternado com sucesso (estado não retornado na resposta esperada).", "info")
             return True
         self._log(f"OBS: Falha ao alternar mudo para '{input_name}'. Resposta: {response}", "error")
@@ -467,7 +472,7 @@ class OBSController:
         request_data = {}
         if input_kind:
             request_data['inputKind'] = input_kind
-        
+
         response = self._send_request("GetInputList", request_data)
         inputs = []
         if response and response.get('d', {}).get('requestStatus', {}).get('code') == 100:
@@ -486,7 +491,7 @@ class OBSController:
         if not scene_name:
             self._log("OBS: Nome da cena não fornecido para get_scene_item_list.", "error")
             return []
-            
+
         self._log(f"OBS: Buscando lista de itens para a cena '{scene_name}'...", "debug")
         response = self._send_request("GetSceneItemList", {"sceneName": scene_name})
         items = []
@@ -514,4 +519,4 @@ class OBSController:
         else:
             error_message = f"OBS: Falha ao testar conexão. Resposta: {response}"
             self._log(error_message, "error")
-            return False, error_message 
+            return False, error_message

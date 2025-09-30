@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QSizePoli
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QIcon
 
+
 class CustomTitleBar(QWidget):
     def __init__(self, window, menubar: QMenuBar, height: int = 32):
         super().__init__(window)
@@ -111,4 +112,4 @@ class CustomTitleBar(QWidget):
         # Maximizar/restaurar ao dar duplo clique
         if event.button() == 1:
             self._toggle_max_restore()
-        super().mouseDoubleClickEvent(event) 
+        super().mouseDoubleClickEvent(event)

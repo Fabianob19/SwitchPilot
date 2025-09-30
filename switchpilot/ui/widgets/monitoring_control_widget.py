@@ -1,7 +1,8 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QPlainTextEdit, QSizePolicy, QFrame, QSpacerItem, QDoubleSpinBox, QCheckBox, QFileDialog)
 from PyQt5.QtCore import Qt, pyqtSignal, QDateTime, QTimer
 from PyQt5.QtGui import QColor, QTextCursor, QFont
+
 
 class MonitoringControlWidget(QFrame):
     # Sinais para iniciar/parar o processo de monitoramento (a serem conectados no core)
@@ -26,13 +27,13 @@ class MonitoringControlWidget(QFrame):
         controls_frame = QFrame()
         controls_frame.setObjectName("monitoringControlsFrame")
         controls_layout = QHBoxLayout(controls_frame)
-        
+
         self.start_button = QPushButton("Iniciar Monitoramento")
-        self.start_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaPlay", None))) # Ícone de Play
+        self.start_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaPlay", None)))  # Ícone de Play
         self.start_button.setStyleSheet("padding: 5px;")
 
         self.stop_button = QPushButton("Parar Monitoramento")
-        self.stop_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaStop", None))) # Ícone de Stop
+        self.stop_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaStop", None)))  # Ícone de Stop
         self.stop_button.setStyleSheet("padding: 5px;")
         self.stop_button.setEnabled(False)
 
@@ -44,7 +45,7 @@ class MonitoringControlWidget(QFrame):
         status_frame = QFrame()
         status_frame.setObjectName("monitoringStatusFrame")
         status_layout = QHBoxLayout(status_frame)
-        status_layout.setContentsMargins(5,2,5,2)
+        status_layout.setContentsMargins(5, 2, 5, 2)
 
         self.status_indicator = QLabel()
         self.status_indicator.setFixedSize(20, 20)
@@ -122,7 +123,7 @@ class MonitoringControlWidget(QFrame):
         # Conectar sinais dos botões
         self.start_button.clicked.connect(self._handle_start_monitoring)
         self.stop_button.clicked.connect(self._handle_stop_monitoring)
-        
+
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -131,13 +132,13 @@ class MonitoringControlWidget(QFrame):
         controls_frame = QFrame()
         controls_frame.setObjectName("monitoringControlsFrame")
         controls_layout = QHBoxLayout(controls_frame)
-        
+
         self.start_button = QPushButton("Iniciar Monitoramento")
-        self.start_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaPlay", None))) # Ícone de Play
+        self.start_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaPlay", None)))  # Ícone de Play
         self.start_button.setStyleSheet("padding: 5px;")
 
         self.stop_button = QPushButton("Parar Monitoramento")
-        self.stop_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaStop", None))) # Ícone de Stop
+        self.stop_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaStop", None)))  # Ícone de Stop
         self.stop_button.setStyleSheet("padding: 5px;")
         self.stop_button.setEnabled(False)
 
@@ -149,7 +150,7 @@ class MonitoringControlWidget(QFrame):
         status_frame = QFrame()
         status_frame.setObjectName("monitoringStatusFrame")
         status_layout = QHBoxLayout(status_frame)
-        status_layout.setContentsMargins(5,2,5,2)
+        status_layout.setContentsMargins(5, 2, 5, 2)
 
         self.status_indicator = QLabel()
         self.status_indicator.setFixedSize(20, 20)
@@ -168,15 +169,15 @@ class MonitoringControlWidget(QFrame):
 
         self.log_output_text = QTextEdit()
         self.log_output_text.setReadOnly(True)
-        self.log_output_text.setLineWrapMode(QTextEdit.WidgetWidth) # Quebra de linha
-        self.log_output_text.setFixedHeight(150) # Altura inicial, pode ser ajustado
+        self.log_output_text.setLineWrapMode(QTextEdit.WidgetWidth)  # Quebra de linha
+        self.log_output_text.setFixedHeight(150)  # Altura inicial, pode ser ajustado
         self.log_output_text.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
-        main_layout.addWidget(self.log_output_text, 1) # O 1 faz com que expanda verticalmente
+        main_layout.addWidget(self.log_output_text, 1)  # O 1 faz com que expanda verticalmente
 
         # Conectar sinais dos botões
         self.start_button.clicked.connect(self._handle_start_monitoring)
         self.stop_button.clicked.connect(self._handle_stop_monitoring)
-        
+
     def _handle_start_monitoring(self):
         if getattr(self, '_is_shutting_down', False):
             return
@@ -235,7 +236,7 @@ class MonitoringControlWidget(QFrame):
         self.add_log_message(f"ERRO: {error_message}", level="error")
         # Manter o estado dos botões ou resetar? Depende da gravidade do erro.
         # Por agora, vamos permitir que o usuário tente parar ou reiniciar.
-        # self.start_button.setEnabled(True) 
+        # self.start_button.setEnabled(True)
         # self.stop_button.setEnabled(False)
 
     def update_status(self, message):
@@ -250,11 +251,11 @@ class MonitoringControlWidget(QFrame):
             return
         # Mudar cor com base no status poderia ser uma melhoria futura
         if "Erro" in message:
-            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #bf616a;") # Vermelho
+            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #bf616a;")  # Vermelho
         elif "Ativo" in message or "Iniciando" in message:
-            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #a3be8c;") # Verde
-        else: # Parado, etc.
-            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #d8dee9;") # Normal
+            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #a3be8c;")  # Verde
+        else:  # Parado, etc.
+            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #d8dee9;")  # Normal
 
     def add_log_message(self, message, level="info"):
         self._log_buffer.append((level, message))
@@ -298,7 +299,7 @@ class MonitoringControlWidget(QFrame):
     def get_thresholds(self):
         """Retorna os valores atuais dos limiares da UI."""
         return {
-            'static': 0.90, # Valor padrão, pois não está mais na UI
+            'static': 0.90,  # Valor padrão, pois não está mais na UI
             'sequence': 0.90
         }
 
@@ -348,13 +349,14 @@ class MonitoringControlWidget(QFrame):
             self.log_text.blockSignals(False)
             self._log_queue.clear()
 
+
 # Para teste individual do widget
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
     import sys
     app = QApplication(sys.argv)
     try:
-        with open('../themes/modern_dark_obs.qss', 'r') as f: # Ajuste o caminho se necessário
+        with open('../themes/modern_dark_obs.qss', 'r') as f:  # Ajuste o caminho se necessário
             app.setStyleSheet(f.read())
     except FileNotFoundError:
         print("QSS de tema não encontrado para teste (../themes/modern_dark_obs.qss)")
@@ -363,7 +365,7 @@ if __name__ == '__main__':
     widget.setWindowTitle("Teste MonitoringControlWidget")
     widget.setGeometry(100, 100, 400, 300)
     widget.show()
-    
+
     # Teste dos slots
     def test_slots():
         widget.add_log_message("Uma mensagem de informação.")
@@ -373,6 +375,6 @@ if __name__ == '__main__':
         widget.monitoring_started()
 
     from PyQt5.QtCore import QTimer
-    QTimer.singleShot(2000, test_slots) # Chamar após 2 segundos
+    QTimer.singleShot(2000, test_slots)  # Chamar após 2 segundos
 
-    sys.exit(app.exec_()) 
+    sys.exit(app.exec_())

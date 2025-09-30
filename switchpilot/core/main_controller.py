@@ -8,6 +8,7 @@ from switchpilot.integrations.obs_controller import OBSController
 from switchpilot.integrations.vmix_controller import VMixController
 from .monitor_thread import MonitorThread
 
+
 class MainController(QObject):
     monitoring_status_update = pyqtSignal(str)
     new_log_message = pyqtSignal(str, str)
@@ -21,10 +22,10 @@ class MainController(QObject):
         self.mon_control_widget = mon_control_widget
         self.obs_config_widget = obs_config_widget
         self.vmix_config_widget = vmix_config_widget
-        
+
         self.monitoring_active = False
-        self.references = [] 
-        self.pgm_details = None 
+        self.references = []
+        self.pgm_details = None
         self.obs_is_known_recording = False
         self.monitor_thread_instance = None
 
@@ -37,12 +38,12 @@ class MainController(QObject):
         if self.obs_controller:
             self.obs_controller.set_log_callback(self.new_log_message.emit)
             self._update_obs_controller_settings()
-        
+
         self.vmix_controller = VMixController()
         if self.vmix_controller:
             self.vmix_controller.set_log_callback(self.new_log_message.emit)
             self._update_vmix_controller_settings()
-        
+
         self._connect_ui_signals()
 
     def _connect_ui_signals(self):
@@ -57,11 +58,11 @@ class MainController(QObject):
                 self.mon_control_widget.set_sequence_threshold_value(self.current_sequence_threshold)
         else:
             self._log_internal("[Core CRITICAL] MonitoringControlWidget não foi fornecido.", "error")
-        
+
         if self.ref_manager_widget:
-            self._log_internal(f"Conectando ao ReferenceManagerWidget: {self.ref_manager_widget}", "debug") 
+            self._log_internal(f"Conectando ao ReferenceManagerWidget: {self.ref_manager_widget}", "debug")
             self.ref_manager_widget.references_updated.connect(self.update_references_from_ui)
-            self.update_references_from_ui(self.ref_manager_widget.get_all_references_data()) 
+            self.update_references_from_ui(self.ref_manager_widget.get_all_references_data())
         else:
             self._log_internal("[Core CRITICAL] ReferenceManagerWidget não foi fornecido.", "error")
 
@@ -88,10 +89,10 @@ class MainController(QObject):
             level = "warning" if self.obs_config_widget else "error"
             self._log_internal(f"OBSConfigWidget ou OBSController não disponível/inicializado. Não é possível atualizar config.", level)
             return
-            
+
         config = self.obs_config_widget.get_config()
         self.obs_controller.host = config.get('host', 'localhost')
-        self.obs_controller.port = int(config.get('port', 4455)) # Garantir que porta é int
+        self.obs_controller.port = int(config.get('port', 4455))  # Garantir que porta é int
         self.obs_controller.password = config.get('password', '')
         self._log_internal(f"Configurações do OBSController atualizadas: Host={self.obs_controller.host}, Porta={self.obs_controller.port}", "info")
 
@@ -99,7 +100,7 @@ class MainController(QObject):
         if not self.obs_controller:
             self._log_internal("OBSController não está inicializado. Não é possível testar a conexão.", "error")
             return
-        self._update_obs_controller_settings() 
+        self._update_obs_controller_settings()
         success, message = self.obs_controller.check_connection()
         log_level = "success" if success else "error"
         self._log_internal(f"Teste de conexão OBS: {'SUCESSO' if success else 'FALHA'}. {message}", log_level)
@@ -109,10 +110,10 @@ class MainController(QObject):
             level = "warning" if self.vmix_config_widget else "error"
             self._log_internal(f"VMixConfigWidget ou VMixController não disponível/inicializado. Não é possível atualizar config.", level)
             return
-            
+
         config = self.vmix_config_widget.get_config()
         self.vmix_controller.host = config.get('host', 'localhost')
-        self.vmix_controller.port = int(config.get('port', 8088)) # Garantir que porta é int
+        self.vmix_controller.port = int(config.get('port', 8088))  # Garantir que porta é int
         self._log_internal(f"Configurações do VMixController atualizadas: Host={self.vmix_controller.host}, Porta={self.vmix_controller.port}", "info")
 
     def _handle_test_vmix_connection(self):
@@ -125,12 +126,12 @@ class MainController(QObject):
         self._log_internal(f"Teste de conexão vMix: {'SUCESSO' if success else 'FALHA'}. {message}", log_level)
 
     def update_references_from_ui(self, references_data_list):
-        self.references = list(references_data_list) 
-        if self.ref_manager_widget: 
+        self.references = list(references_data_list)
+        if self.ref_manager_widget:
             pgm_details_from_ref_manager = getattr(self.ref_manager_widget, 'selected_pgm_details', None)
-            if pgm_details_from_ref_manager: 
+            if pgm_details_from_ref_manager:
                 self.pgm_details = pgm_details_from_ref_manager
-        
+
         self._log_internal(f"Referências atualizadas: {len(self.references)} referências.", "debug")
         if self.pgm_details:
             self._log_internal(f"Detalhes PGM atualizados: {self.pgm_details.get('source_name', 'N/A')} ROI: {self.pgm_details.get('roi', 'N/A')}", "debug")
@@ -142,22 +143,24 @@ class MainController(QObject):
             self._log_internal("Monitoramento já está ativo.", "warning")
             return
 
-        if self.ref_manager_widget: 
+        if self.ref_manager_widget:
             self.update_references_from_ui(self.ref_manager_widget.get_all_references_data())
 
         if not self.references:
             self._log_internal("Nenhuma imagem de referência configurada. Não é possível iniciar.", "error")
-            self.monitoring_encountered_error.emit("Nenhuma referência definida.") 
-            if self.mon_control_widget: self.mon_control_widget.monitoring_stopped("Nenhuma referência definida.")
+            self.monitoring_encountered_error.emit("Nenhuma referência definida.")
+            if self.mon_control_widget:
+                self.mon_control_widget.monitoring_stopped("Nenhuma referência definida.")
             return
 
         if not self.pgm_details or not self.pgm_details.get('roi'):
             self._log_internal("Região PGM não definida. Selecione no Gerenciador de Referências.", "error")
             self.monitoring_encountered_error.emit("Região PGM não definida.")
-            if self.mon_control_widget: self.mon_control_widget.monitoring_stopped("Região PGM não definida.")
+            if self.mon_control_widget:
+                self.mon_control_widget.monitoring_stopped("Região PGM não definida.")
             return
 
-        if self.obs_controller: 
+        if self.obs_controller:
             try:
                 is_currently_recording, _, _ = self.obs_controller.get_record_status()
                 self.obs_is_known_recording = is_currently_recording
@@ -177,7 +180,7 @@ class MainController(QObject):
         self.monitor_thread_instance.log_signal.connect(self._handle_thread_log)
         self.monitor_thread_instance.status_signal.connect(self._handle_thread_status)
         self.monitor_thread_instance.finished.connect(self._on_monitor_thread_finished)
-        
+
         self.monitor_thread_instance.start()
         self.monitoring_actually_started.emit()
         self._log_internal("Thread de monitoramento iniciada.", "info")
@@ -192,37 +195,37 @@ class MainController(QObject):
         if self.mon_control_widget:
             if status_message == "Monitoramento Ativo" and self.monitoring_active:
                 self.mon_control_widget.monitoring_started()
-            elif status_message == "Monitoramento Parado": # Não checar self.monitoring_active aqui, pois a thread pode parar sozinha
-                reason = "Thread parou" # Razão genérica se a thread parou por si
+            elif status_message == "Monitoramento Parado":  # Não checar self.monitoring_active aqui, pois a thread pode parar sozinha
+                reason = "Thread parou"  # Razão genérica se a thread parou por si
                 # Se self.monitoring_active for False, significa que foi parada por stop_monitoring(), que já tem uma razão melhor
                 if not self.monitoring_active and hasattr(self.monitor_thread_instance, 'stop_reason'):
-                     reason = self.monitor_thread_instance.stop_reason if self.monitor_thread_instance else reason
+                    reason = self.monitor_thread_instance.stop_reason if self.monitor_thread_instance else reason
 
-                if self.mon_control_widget: self.mon_control_widget.monitoring_stopped(reason)
+                if self.mon_control_widget:
+                    self.mon_control_widget.monitoring_stopped(reason)
                 # self.monitoring_actually_stopped.emit(reason) # Emitido por stop_monitoring ou _on_monitor_thread_finished
-            else: # Outros status
+            else:  # Outros status
                 self.mon_control_widget.update_status(status_message)
 
-
     def _on_monitor_thread_finished(self):
-        thread_was_active_before_finish = self.monitoring_active # Capturar estado antes de modificar
+        thread_was_active_before_finish = self.monitoring_active  # Capturar estado antes de modificar
         self._log_internal("Thread de monitoramento finalizada (sinal finished).", "info")
-        
+
         # Não redefina os limiares atuais aqui, eles devem persistir como definidos pelo usuário
 
-        if thread_was_active_before_finish: # Se a thread terminou mas o controller achava que estava ativa
-            self.monitoring_active = False 
+        if thread_was_active_before_finish:  # Se a thread terminou mas o controller achava que estava ativa
+            self.monitoring_active = False
             self._log_internal("Thread de monitoramento parece ter terminado inesperadamente ou por conta própria.", "warning")
             reason = "Thread terminou inesperadamente"
             if self.mon_control_widget:
                 self.mon_control_widget.monitoring_stopped(reason)
-            self.monitoring_actually_stopped.emit(reason) # Emitir que parou
+            self.monitoring_actually_stopped.emit(reason)  # Emitir que parou
 
         # Limpar a instância da thread se ela realmente terminou
         if self.monitor_thread_instance and not self.monitor_thread_instance.isRunning():
-             self.monitor_thread_instance = None
+            self.monitor_thread_instance = None
 
-        if self.obs_controller: 
+        if self.obs_controller:
             self.obs_is_known_recording = False
 
     # Slots para atualizar os limiares dinamicamente
@@ -262,35 +265,34 @@ class MainController(QObject):
     def stop_monitoring(self, reason="Solicitado pelo usuário."):
         if not self.monitoring_active:
             self._log_internal("Monitoramento não está ativo para ser parado.", "warning")
-            if self.monitor_thread_instance and self.monitor_thread_instance.isRunning(): # Caso raro: thread rodando mas active=False
-                 self._log_internal("Estado inconsistente: monitor_thread rodando mas monitoring_active=False. Tentando parar thread.", "warning")
-            elif self.monitor_thread_instance: # Se existe instância mas não está rodando (já terminou)
-                 self.monitor_thread_instance = None # Apenas limpar
-                 return
-            else: # Nenhuma thread e não ativo
-                 return
+            if self.monitor_thread_instance and self.monitor_thread_instance.isRunning():  # Caso raro: thread rodando mas active=False
+                self._log_internal("Estado inconsistente: monitor_thread rodando mas monitoring_active=False. Tentando parar thread.", "warning")
+            elif self.monitor_thread_instance:  # Se existe instância mas não está rodando (já terminou)
+                self.monitor_thread_instance = None  # Apenas limpar
+                return
+            else:  # Nenhuma thread e não ativo
+                return
 
         self._log_internal(f"Parando monitoramento... Razão: {reason}", "info")
-        self.monitoring_active = False 
+        self.monitoring_active = False
 
         if self.monitor_thread_instance and self.monitor_thread_instance.isRunning():
-            if hasattr(self.monitor_thread_instance, 'stop_reason'): # Para passar a razão para a thread
+            if hasattr(self.monitor_thread_instance, 'stop_reason'):  # Para passar a razão para a thread
                 self.monitor_thread_instance.stop_reason = reason
             self.monitor_thread_instance.stop()
             if not self.monitor_thread_instance.wait(5000):
                 self._log_internal("Timeout ao aguardar thread, terminando forçadamente.", "warning")
                 self.monitor_thread_instance.terminate()
-                self.monitor_thread_instance.wait() 
+                self.monitor_thread_instance.wait()
             else:
                 self._log_internal("Thread de monitoramento finalizada graciosamente.", "debug")
-        
-        # Se a thread foi parada/terminou, self.monitor_thread_instance será None após _on_monitor_thread_finished ou aqui
-        self.monitor_thread_instance = None 
-        self._log_internal("Monitoramento efetivamente parado.", "info")
-        self.monitoring_actually_stopped.emit(reason) # Sinaliza para UI
-        if self.obs_controller: 
-            self.obs_is_known_recording = False
 
+        # Se a thread foi parada/terminou, self.monitor_thread_instance será None após _on_monitor_thread_finished ou aqui
+        self.monitor_thread_instance = None
+        self._log_internal("Monitoramento efetivamente parado.", "info")
+        self.monitoring_actually_stopped.emit(reason)  # Sinaliza para UI
+        if self.obs_controller:
+            self.obs_is_known_recording = False
 
     def _execute_action(self, action_data):
         if not action_data:
@@ -308,12 +310,14 @@ class MainController(QObject):
                 if not self.obs_controller:
                     self._log_internal("OBS Controller não disponível.", "error")
                     return
-                
+
                 if action_type == "Trocar Cena":
                     scene_name = params.get("scene_name")
-                    if scene_name: self.obs_controller.set_current_scene(scene_name)
-                    else: self._log_internal("OBS: Nome da cena ausente.", "error")
-                
+                    if scene_name:
+                        self.obs_controller.set_current_scene(scene_name)
+                    else:
+                        self._log_internal("OBS: Nome da cena ausente.", "error")
+
                 elif action_type == "Definir Visibilidade da Fonte":
                     scene_name = params.get("scene_name_for_item", params.get("scene_name"))
                     item_name = params.get("item_name")
@@ -323,11 +327,13 @@ class MainController(QObject):
                         self.obs_controller.set_source_visibility(scene_name, item_name, is_visible)
                     else:
                         self._log_internal("OBS: Cena ou nome da fonte ausente para visibilidade.", "error")
-                
+
                 elif action_type == "Alternar Mudo (Fonte de Áudio)":
                     input_name = params.get("input_name")
-                    if input_name: self.obs_controller.toggle_mute(input_name)
-                    else: self._log_internal("OBS: Nome da fonte de áudio ausente para mudo.", "error")
+                    if input_name:
+                        self.obs_controller.toggle_mute(input_name)
+                    else:
+                        self._log_internal("OBS: Nome da fonte de áudio ausente para mudo.", "error")
 
                 elif action_type == "Iniciar Gravação":
                     if self.obs_is_known_recording:
@@ -339,10 +345,10 @@ class MainController(QObject):
                             self.obs_is_known_recording = True
                         elif self.obs_controller.start_record():
                             self.obs_is_known_recording = True
-                
+
                 elif action_type == "Parar Gravação":
                     if not self.obs_is_known_recording:
-                         self._log_internal("OBS: Gravação já inativa (estado conhecido). Ignorando.", "info")
+                        self._log_internal("OBS: Gravação já inativa (estado conhecido). Ignorando.", "info")
                     else:
                         is_rec, _, _ = self.obs_controller.get_record_status()
                         if not is_rec:
@@ -350,13 +356,13 @@ class MainController(QObject):
                             self.obs_is_known_recording = False
                         elif self.obs_controller.stop_record():
                             self.obs_is_known_recording = False
-                
+
                 elif action_type == "Iniciar Streaming":
-                    self.obs_controller.start_stream() # Adicionar lógica de verificação de estado
-                
+                    self.obs_controller.start_stream()  # Adicionar lógica de verificação de estado
+
                 elif action_type == "Parar Streaming":
-                    self.obs_controller.stop_stream() # Adicionar lógica de verificação de estado
-                
+                    self.obs_controller.stop_stream()  # Adicionar lógica de verificação de estado
+
                 else:
                     self._log_internal(f"OBS: Tipo de ação desconhecido: {action_type}", "warning")
 
@@ -370,11 +376,14 @@ class MainController(QObject):
                     if func_name:
                         vmix_params = {}
                         input_val = params.get("vmix_input") or params.get("input")
-                        if input_val: vmix_params["Input"] = input_val
+                        if input_val:
+                            vmix_params["Input"] = input_val
                         value_val = params.get("vmix_value") or params.get("value")
-                        if value_val: vmix_params["Value"] = value_val
+                        if value_val:
+                            vmix_params["Value"] = value_val
                         duration_val = params.get("vmix_duration") or params.get("duration")
-                        if duration_val: vmix_params["Duration"] = duration_val
+                        if duration_val:
+                            vmix_params["Duration"] = duration_val
                         mix_idx = params.get("mix_index")
                         if mix_idx is not None:
                             try:
@@ -384,19 +393,21 @@ class MainController(QObject):
                         self.vmix_controller.send_function(func_name, **vmix_params)
                     else:
                         self._log_internal("vMix: Nome da função genérica ausente.", "error")
-                
+
                 elif action_type == "SetText":
                     input_val = params.get("vmix_input") or params.get("input")
-                    sel_name = params.get("selected_name", params.get("vmix_selected_name")) 
+                    sel_name = params.get("selected_name", params.get("vmix_selected_name"))
                     text_val = params.get("text_value")
                     if input_val and sel_name is not None and text_val is not None:
                         self.vmix_controller.set_text(input_val, sel_name, text_val)
                     else:
                         self._log_internal("vMix SetText: Parâmetros ausentes (Input, SelectedName ou Value).", "error")
-                
-                elif action_type == "StartRecording": self.vmix_controller.start_recording()
-                elif action_type == "StopRecording": self.vmix_controller.stop_recording()
-                
+
+                elif action_type == "StartRecording":
+                    self.vmix_controller.start_recording()
+                elif action_type == "StopRecording":
+                    self.vmix_controller.stop_recording()
+
                 elif action_type == "Fade":
                     try:
                         duration = int(params.get("vmix_duration_for_fade", params.get("duration", 500)) or 500)
@@ -409,7 +420,7 @@ class MainController(QObject):
                     except Exception:
                         pass
                     self.vmix_controller.fade(input_val, duration, mix_idx)
-                
+
                 elif action_type == "Cut":
                     input_val = params.get("vmix_input") or params.get("vmix_input_for_cut") or params.get("input")
                     mix_idx = params.get("mix_index", 1)
@@ -418,7 +429,7 @@ class MainController(QObject):
                     except Exception:
                         pass
                     self.vmix_controller.cut(input_val, mix_idx)
-                
+
                 elif action_type == "OverlayInputIn":
                     try:
                         channel = int(params.get("overlay_channel", 1))
@@ -426,17 +437,17 @@ class MainController(QObject):
                         channel = 1
                     input_val = params.get("vmix_input") or params.get("vmix_input_for_overlay") or params.get("input")
                     self.vmix_controller.overlay_input_in(channel, input_val)
-                
+
                 elif action_type == "OverlayInputOut":
                     try:
                         channel = int(params.get("overlay_channel", 1))
                     except Exception:
                         channel = 1
                     self.vmix_controller.overlay_input_out(channel)
-                
+
                 else:
                     self._log_internal(f"vMix: Tipo de ação desconhecido: {action_type}", "warning")
-            
+
             else:
                 self._log_internal(f"Integração desconhecida para ação: {integration}", "warning")
 
@@ -465,25 +476,32 @@ class MainController(QObject):
         elif integration == "vMix":
             if action_type == 'Function (Genérico)':
                 parts = [f"Função: {params.get('function_name', 'N/A')}"]
-                if params.get('input'): parts.append(f"Input: {params['input']}")
-                if params.get('value'): parts.append(f"Valor: {params['value']}")
-                if params.get('duration'): parts.append(f"Duração: {params['duration']}")
+                if params.get('input'):
+                    parts.append(f"Input: {params['input']}")
+                if params.get('value'):
+                    parts.append(f"Valor: {params['value']}")
+                if params.get('duration'):
+                    parts.append(f"Duração: {params['duration']}")
                 return f"{desc} ({', '.join(parts)})"
             elif action_type == 'SetText':
                 return f"{desc}: Input '{params.get('input', 'N/A')}', Campo '{params.get('selected_name', params.get('vmix_selected_name','N/A'))}', Valor '{str(params.get('text_value', ''))[:20]}...'"
             elif action_type == 'Fade' or action_type == 'Cut':
                 parts = []
-                if params.get('input'): parts.append(f"Input: {params['input']}")
-                if action_type == 'Fade' and params.get('duration'): parts.append(f"Duração: {params['duration']}ms")
+                if params.get('input'):
+                    parts.append(f"Input: {params['input']}")
+                if action_type == 'Fade' and params.get('duration'):
+                    parts.append(f"Duração: {params['duration']}ms")
                 return f"{desc} ({', '.join(parts) if parts else 'Preview/Program'})"
             elif action_type == 'OverlayInputIn' or action_type == 'OverlayInputOut':
                 parts = [f"Canal: {params.get('overlay_channel', 'N/A')}"]
-                if action_type == 'OverlayInputIn' and params.get('input'): parts.append(f"Input: {params['input']}")
+                if action_type == 'OverlayInputIn' and params.get('input'):
+                    parts.append(f"Input: {params['input']}")
                 return f"{desc} ({', '.join(parts)})"
 
         simple_actions = ["Iniciar Gravação", "Parar Gravação", "Iniciar Streaming", "Parar Streaming", "StartRecording", "StopRecording"]
-        if action_type in simple_actions: return desc
-        
+        if action_type in simple_actions:
+            return desc
+
         param_summary = [f"{k}='{str(v)[:20]}...'" for k, v in params.items()]
         return f"{desc} ({', '.join(param_summary)})" if param_summary else desc
 
@@ -511,17 +529,17 @@ class MainController(QObject):
     def get_obs_input_list(self):
         if self.obs_controller:
             try:
-                return self.obs_controller.get_input_list() # Lista de fontes de áudio/inputs
+                return self.obs_controller.get_input_list()  # Lista de fontes de áudio/inputs
             except Exception as e:
                 self._log_internal(f"Erro ao obter lista de inputs OBS: {e}", "error")
                 return []
         self._log_internal("Controlador OBS não disponível para obter lista de inputs.", "warning")
         return []
-    
+
     def get_vmix_inputs(self):
         if self.vmix_controller:
             try:
-                inputs = self.vmix_controller.get_inputs_list() 
+                inputs = self.vmix_controller.get_inputs_list()
                 return inputs
             except Exception as e:
                 self._log_internal(f"Erro ao obter inputs do vMix: {e}", "error")
@@ -532,39 +550,39 @@ class MainController(QObject):
     def get_vmix_title_fields(self, input_id_or_name):
         if self.vmix_controller:
             try:
-                fields = self.vmix_controller.get_title_fields(input_id_or_name) 
+                fields = self.vmix_controller.get_title_fields(input_id_or_name)
                 return fields
             except Exception as e:
                 self._log_internal(f"Erro ao obter campos de título do vMix para input '{input_id_or_name}': {e}", "error")
                 return []
         self._log_internal(f"Controlador vMix não conectado para obter campos de título.", "warning")
         return []
-        
+
     # --- Persistência de Configurações (Exemplo) ---
     def load_project_settings(self, filepath):
         # Implementação futura
         self._log_internal(f"Funcionalidade 'Carregar Projeto' ainda não implementada ({filepath}).", "info")
-        pass 
+        pass
 
     def save_project_settings(self, filepath):
         # Implementação futura
         self._log_internal(f"Funcionalidade 'Salvar Projeto' ainda não implementada ({filepath}).", "info")
-        pass 
+        pass
 
     def cleanup(self):
         self._log_internal("Realizando cleanup do MainController...", "info")
         if self.monitoring_active or (self.monitor_thread_instance and self.monitor_thread_instance.isRunning()):
             self.stop_monitoring("Aplicação encerrando.")
-        
+
         # if self.obs_controller: # A conexão é feita e desfeita por requisição no OBSController atual
         #     # self.obs_controller.disconnect() # Não existe este método, e não é necessário
         #     self._log_internal("OBS Controller - Nenhuma desconexão explícita necessária.", "debug")
-        
+
         # Adicionar cleanup para vMixController se necessário
         # if self.vmix_controller and hasattr(self.vmix_controller, 'close_connection'):
         #     self.vmix_controller.close_connection()
 
         self._log_internal("Cleanup do MainController concluído.", "info")
 
-    def connect_to_ui_slots(self): # Método parece obsoleto dado _connect_ui_signals
+    def connect_to_ui_slots(self):  # Método parece obsoleto dado _connect_ui_signals
         pass

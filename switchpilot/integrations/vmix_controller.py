@@ -1,6 +1,7 @@
 import requests
 import xml.etree.ElementTree as ET
 
+
 class VMixController:
     def __init__(self, host="localhost", port="8088"):
         self.host = host
@@ -21,7 +22,7 @@ class VMixController:
         Envia uma requisição para a API HTTP do vMix.
         Args:
             function_name (str): O nome da função da API vMix (ex: "StartStopRecording").
-            params (dict, optional): Dicionário de parâmetros adicionais para a função 
+            params (dict, optional): Dicionário de parâmetros adicionais para a função
                                      (ex: {"Input": "1", "Value": "My Text"}).
         Returns:
             requests.Response object or None if an error occurred.
@@ -31,19 +32,19 @@ class VMixController:
             return None
 
         base_url = f"http://{self.host}:{self.port}/api/"
-        
+
         request_params = {"Function": function_name}
         if params:
             request_params.update(params)
-        
+
         try:
             self._log(f"Enviando para vMix: Function={function_name}, Params={params if params else '{}'}", "debug")
-            response = requests.get(base_url, params=request_params, timeout=5) # Timeout de 5 segundos
+            response = requests.get(base_url, params=request_params, timeout=5)  # Timeout de 5 segundos
             response.raise_for_status()  # Levanta HTTPError para respostas ruins (4xx ou 5xx)
-            
+
             # vMix geralmente retorna 200 OK mesmo para comandos que não fazem nada se a sintaxe estiver correta.
             # O conteúdo da resposta (XML) precisaria ser verificado para erros lógicos específicos do vMix.
-            self._log(f"vMix Resposta (Status {response.status_code}): {response.text[:200]}...", "debug") # Logar início da resposta
+            self._log(f"vMix Resposta (Status {response.status_code}): {response.text[:200]}...", "debug")  # Logar início da resposta
             return response
         except requests.exceptions.Timeout:
             self._log(f"Timeout ao conectar/enviar para vMix API em {base_url} com params {request_params}", "error")
@@ -84,7 +85,7 @@ class VMixController:
         if not self.host or not self.port:
             self._log("Host ou Porta do vMix não configurados para teste.", "error")
             return False, "Host/Porta não configurados."
-        
+
         base_url = f"http://{self.host}:{self.port}/api/"
         try:
             response = requests.get(base_url, timeout=3)
@@ -97,7 +98,7 @@ class VMixController:
             # version = tree.find('version').text
             # self._log(f"vMix: Conexão bem-sucedida. Versão vMix: {version}", "success")
             # return True, f"Conectado! vMix Versão: {version}"
-            
+
             self._log(f"vMix: Conexão bem-sucedida (Status {response.status_code}).", "success")
             return True, f"Conectado! vMix respondeu de {self.host}:{self.port}."
 
@@ -127,24 +128,24 @@ class VMixController:
         try:
             response = requests.get(base_url, timeout=5)
             response.raise_for_status()
-            
+
             xml_root = ET.fromstring(response.content)
             inputs_element = xml_root.find("inputs")
             if inputs_element is not None:
                 for input_node in inputs_element.findall("input"):
                     title = input_node.get("title")
                     number = input_node.get("number")
-                    key = input_node.get("key") # UUID do input
-                    input_type = input_node.get("type") # Adicionar tipo
+                    key = input_node.get("key")  # UUID do input
+                    input_type = input_node.get("type")  # Adicionar tipo
                     # Adicionar apenas inputs que tenham um título, número e chave
                     if title and number and key:
                         inputs_details_list.append({
                             "title": title,
                             "number": number,
                             "key": key,
-                            "type": input_type # Adicionar tipo ao dicionário
+                            "type": input_type  # Adicionar tipo ao dicionário
                         })
-            
+
             if not inputs_details_list:
                 self._log("Nenhum input detalhado encontrado no XML do vMix ou XML malformado.", "debug")
             else:
@@ -161,7 +162,7 @@ class VMixController:
             self._log(f"Erro ao parsear XML da lista de inputs do vMix: {e}", "error")
         except requests.exceptions.RequestException as e:
             self._log(f"Erro genérico de requisição ao buscar inputs do vMix API: {e}", "error")
-        return [] # Retorna lista vazia em caso de erro
+        return []  # Retorna lista vazia em caso de erro
 
     # --- Métodos de Ação Específicos ---
     def set_text(self, input_name_or_key, selected_name_or_index="SelectedName", value=""):
@@ -169,13 +170,13 @@ class VMixController:
         Define o texto de um elemento Title/GT.
         Args:
             input_name_or_key (str): Nome ou chave do Input (ex: "MeuTitulo.xaml" ou UUID).
-            selected_name_or_index (str): Nome do campo de texto no Title (ex: "NomeConvidado.Text") 
+            selected_name_or_index (str): Nome do campo de texto no Title (ex: "NomeConvidado.Text")
                                          ou índice do campo de texto (ex: "0" para o primeiro).
             value (str): O texto a ser definido.
         """
         params = {
             "Input": input_name_or_key,
-            "SelectedName": selected_name_or_index, # Ou pode ser um índice como "0", "1"
+            "SelectedName": selected_name_or_index,  # Ou pode ser um índice como "0", "1"
             "Value": value
         }
         response = self._send_request("SetText", params)
@@ -211,7 +212,7 @@ class VMixController:
             self._log(f"Comando Fade (Duração: {duration_ms}ms, Input: {input_key_or_name if input_key_or_name else 'Preview/Program'}, Mix: {mix_index}) enviado.", "info")
             return True
         return False
-        
+
     def cut(self, input_key_or_name=None, mix_index=1):
         params = {"Mix": mix_index}
         if input_key_or_name:
@@ -234,7 +235,7 @@ class VMixController:
             # API: Function=OverlayInputIn, Input=<numero_do_overlay>
             final_params = {"Input": overlay_channel}
             response = self._send_request("OverlayInputIn", final_params)
-            
+
         if response and response.status_code == 200:
             self._log(f"Comando para Overlay {overlay_channel} (Input: {input_key_or_name if input_key_or_name else 'Atual'}) enviado.", "info")
             return True
@@ -247,5 +248,5 @@ class VMixController:
             return True
         return False
 
-    # Adicionar outros métodos conforme necessário: 
-    # start_streaming, stop_streaming, set_volume, etc. 
+    # Adicionar outros métodos conforme necessário:
+    # start_streaming, stop_streaming, set_volume, etc.
