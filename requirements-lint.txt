@@ -1,0 +1,7 @@
+# Requirements para Lint (multiplataforma)
+# Apenas o necessário para análise estática de código
+PyQt5
+opencv-python
+numpy
+requests
+websocket-client
