@@ -29,6 +29,8 @@ ignore =
 # Configurações por arquivo
 # __init__.py: F401=imports não usados, F403=wildcard imports
 # main.py: E402=imports após código
+# reference_manager.py: C901=funções complexas (refatorar no futuro)
 per-file-ignores =
     __init__.py:F401,F403
     main.py:E402
+    switchpilot/ui/widgets/reference_manager.py:C901

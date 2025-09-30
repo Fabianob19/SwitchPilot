@@ -25,12 +25,12 @@ import mss  # Adicionada importação
 import cv2  # Adicionada importação
 import numpy as np  # Adicionada importação
 import os  # Adicionada importação
-import re # Para sanitizar nomes de arquivo
-import shutil # Adicionada importação para cópia de arquivos
+import re  # Para sanitizar nomes de arquivo
+import shutil  # Adicionada importação para cópia de arquivos
 import time
 import ctypes
 from ctypes import wintypes
-# import NDIlib as NDI # Adicionada importação para NDI
+# import NDIlib as NDI  # Adicionada importação para NDI
 try:
     import NDIlib as NDI
     NDI_AVAILABLE = True
@@ -38,7 +38,8 @@ except Exception:
     NDI = None
     NDI_AVAILABLE = False
 
-from .action_config_dialog import ActionConfigDialog # Adicionada importação
+from .action_config_dialog import ActionConfigDialog  # Adicionada importação
+
 
 def safe_print(message):
     """Imprime sem quebrar o app quando o console não suporta caracteres.
@@ -56,6 +57,7 @@ def safe_print(message):
         except Exception:
             pass
 
+
 class ReferenceManagerWidget(QWidget):
     """Widget para gerenciar as imagens de referência para monitoramento."""
     # Sinal para notificar a MainWindow ou outro controller sobre mudanças nas referências
@@ -63,9 +65,9 @@ class ReferenceManagerWidget(QWidget):
 
     def __init__(self, parent=None, main_controller=None):
         super().__init__(parent)
-        self.main_controller = main_controller # <--- Armazenar main_controller
-        self.selected_pgm_details = None # (type: 'monitor'/'window', id: monitor_idx/window_obj, roi: (x,y,w,h))
-        self.references_data = [] # Lista para armazenar dados das referências {'name': str, 'path': str, 'actions': []}
+        self.main_controller = main_controller  # <--- Armazenar main_controller
+        self.selected_pgm_details = None  # (type: 'monitor'/'window', id: monitor_idx/window_obj, roi: (x,y,w,h))
+        self.references_data = []  # Lista para armazenar dados das referências {'name': str, 'path': str, 'actions': []}
         self._setup_ui()
         self._ensure_references_dir()
 
@@ -75,12 +77,12 @@ class ReferenceManagerWidget(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(5, 5, 5, 5) # Margens menores para docks
+        main_layout.setContentsMargins(5, 5, 5, 5)  # Margens menores para docks
 
         # --- Seção de Ações Globais ---
         actions_group = QFrame(self)  # Usando QFrame para agrupar visualmente
         actions_group.setObjectName("actionsGroupFrame")  # Para estilização específica se necessário
-        # actions_group.setFrameShape(QFrame.StyledPanel) # Estilo do painel via QSS
+        # actions_group.setFrameShape(QFrame.StyledPanel)  # Estilo do painel via QSS
         actions_layout = QVBoxLayout(actions_group)
         actions_layout.setSpacing(10)
 
@@ -110,7 +112,7 @@ class ReferenceManagerWidget(QWidget):
         _mon_layout.setSpacing(6)
         _mon_layout.addWidget(self.monitor_list_combo, 1)
         _mon_layout.addWidget(self.btn_refresh_monitors, 0)
-        self.monitor_list_label.setVisible(True) # Visível por padrão para monitores
+        self.monitor_list_label.setVisible(True)  # Visível por padrão para monitores
         self.monitor_field_container.setVisible(True)
         source_capture_layout.addRow(self.monitor_list_label, self.monitor_field_container)
 
@@ -157,7 +159,7 @@ class ReferenceManagerWidget(QWidget):
 
         # --- Região PGM ---
         self.pgm_region_label = QLabel("Região PGM: Não definida")
-        self.pgm_region_label.setStyleSheet("font-style: italic; color: #d8dee9;")
+        self.pgm_region_label.setStyleSheet("font-style: italic; color:  #d8dee9;")
         actions_layout.addWidget(self.pgm_region_label)
 
         self.select_region_button = QPushButton("Selecionar Região PGM")
@@ -438,7 +440,7 @@ class ReferenceManagerWidget(QWidget):
                     else:
                         scale = min(max_w / float(w), max_h / float(h))
                         # Interpolation voltada à nitidez (nearest) na visualização
-                        display_img = cv2.resize(img_to_show, (int(w*scale), int(h*scale)), interpolation=cv2.INTER_NEAREST)
+                        display_img = cv2.resize(img_to_show, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_NEAREST)
                     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
                     # Definir tamanho exato da janela para o display_img calculado
                     try:
@@ -488,11 +490,11 @@ class ReferenceManagerWidget(QWidget):
                     self.pgm_region_label.setText(
                         f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {capture_source_name}"
                     )
-                    self.pgm_region_label.setStyleSheet("color: #a3be8c;")
+                    self.pgm_region_label.setStyleSheet("color:  #a3be8c;")
                     # REMOVIDO: print(f"Região PGM selecionada: {self.selected_pgm_details}")
 
                     # --- Adicionar automaticamente a primeira referência ---
-                    first_ref_image = img_to_show[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
+                    first_ref_image = img_to_show[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
 
                     if first_ref_image.size == 0:
                         QMessageBox.warning(self, "Erro de Captura Automática", "A região selecionada resultou em uma imagem vazia.")
@@ -572,7 +574,7 @@ class ReferenceManagerWidget(QWidget):
                     self.selected_pgm_details = None
                     self.pgm_region_label.setText("Região PGM: Seleção cancelada ou inválida")
                     self.pgm_region_label.setStyleSheet(
-                        "font-style: italic; color: #bf616a;"
+                        "font-style: italic; color:  #bf616a;"
                     )  # Vermelho para erro/aviso
             else:
                 QMessageBox.warning(
@@ -592,7 +594,7 @@ class ReferenceManagerWidget(QWidget):
             )
             self.selected_pgm_details = None
             self.pgm_region_label.setText("Região PGM: Erro na captura")
-            self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")
+            self.pgm_region_label.setStyleSheet("font-style: italic; color:  #bf616a;")
         except Exception as e:
             QMessageBox.critical(
                 self,
@@ -601,7 +603,7 @@ class ReferenceManagerWidget(QWidget):
             )
             self.selected_pgm_details = None
             self.pgm_region_label.setText("Região PGM: Erro na seleção")
-            self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")
+            self.pgm_region_label.setStyleSheet("font-style: italic; color:  #bf616a;")
             # REMOVIDO: import traceback
             # REMOVIDO: traceback.print_exc()
         finally:
@@ -621,6 +623,7 @@ class ReferenceManagerWidget(QWidget):
         """
         our_qt_win = self.window()
         # Não vamos mais alterar a opacidade da nossa janela para evitar ficar invisível
+
         def _restore_our_window():
             return None
 
@@ -643,7 +646,7 @@ class ReferenceManagerWidget(QWidget):
                         pass
                     if is_minimized:
                         # Restaurar e mover para fora da área visível, capturar e devolver
-                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                        win32gui.ShowWindow(hwnd.SW_RESTORE)
                         try:
                             with mss.mss() as sct_v:
                                 v = sct_v.monitors[0]
@@ -664,13 +667,11 @@ class ReferenceManagerWidget(QWidget):
                         off_y = v_bottom + 200
                         try:
                             win32gui.SetWindowPos(
-                                hwnd,
-                                win32con.HWND_NOTOPMOST,
+                                hwnd.HWND_NOTOPMOST,
                                 off_x,
                                 off_y,
                                 w,
-                                h,
-                                win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW,
+                                h.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW,
                             )
                         except Exception:
                             pass
@@ -689,7 +690,7 @@ class ReferenceManagerWidget(QWidget):
                         img = self._capture_window_via_printwindow(hwnd)
                         # Re-minimizar se estava minimizada antes
                         try:
-                            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                            win32gui.ShowWindow(hwnd.SW_MINIMIZE)
                         except Exception:
                             pass
                         if img is not None and img.size > 0 and np.any(img):
@@ -699,14 +700,14 @@ class ReferenceManagerWidget(QWidget):
                             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
                             width = max(0, right - left)
                             height = max(0, bottom - top)
-                            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, left, top, width, height, win32con.SWP_SHOWWINDOW)
+                            win32gui.SetWindowPos(hwnd.HWND_TOPMOST, left, top, width, height.SWP_SHOWWINDOW)
                             time.sleep(0.12)
                             with mss.mss() as sct_tmp:
                                 raw = sct_tmp.grab({'left': left, 'top': top, 'width': width, 'height': height})
                                 mss_img = cv2.cvtColor(np.array(raw), cv2.COLOR_BGRA2BGR)
                             # Re-minimizar novamente
                             try:
-                                win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                                win32gui.ShowWindow(hwnd.SW_MINIMIZE)
                             except Exception:
                                 pass
                             if mss_img is not None and mss_img.size > 0 and np.any(mss_img):
@@ -767,13 +768,11 @@ class ReferenceManagerWidget(QWidget):
                             target_left = max(v_left + 20, v_left)
                             target_top = max(v_top + 20, v_top)
                             win32gui.SetWindowPos(
-                                hwnd,
-                                win32con.HWND_TOPMOST,
+                                hwnd.HWND_TOPMOST,
                                 target_left,
                                 target_top,
                                 max(100, w_width),
-                                max(100, w_height),
-                                win32con.SWP_SHOWWINDOW,
+                                max(100, w_height).SWP_SHOWWINDOW,
                             )
                             try:
                                 win32gui.SetForegroundWindow(hwnd)
@@ -796,19 +795,17 @@ class ReferenceManagerWidget(QWidget):
                             try:
                                 # Remover topmost e voltar posição original
                                 win32gui.SetWindowPos(
-                                    hwnd,
-                                    win32con.HWND_NOTOPMOST,
+                                    hwnd.HWND_NOTOPMOST,
                                     orig_rect[0],
                                     orig_rect[1],
                                     max(100, orig_rect[2] - orig_rect[0]),
-                                    max(100, orig_rect[3] - orig_rect[1]),
-                                    win32con.SWP_SHOWWINDOW,
+                                    max(100, orig_rect[3] - orig_rect[1]).SWP_SHOWWINDOW,
                                 )
                             except Exception:
                                 pass
                             try:
                                 if is_minimized:
-                                    win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                                    win32gui.ShowWindow(hwnd.SW_MINIMIZE)
                             except Exception:
                                 pass
                             try:
@@ -818,6 +815,7 @@ class ReferenceManagerWidget(QWidget):
                             except Exception:
                                 pass
                 except Exception:
+
                     def _restore_state():
                         return None
 
@@ -890,7 +888,6 @@ class ReferenceManagerWidget(QWidget):
         try:
             import win32gui  # type: ignore
             import win32ui  # type: ignore
-            import win32con  # type: ignore
         except Exception:
             return None
 
@@ -1250,9 +1247,9 @@ class ReferenceManagerWidget(QWidget):
             # try:
             #     if os.path.exists(removed_ref_data['path']):
             #         os.remove(removed_ref_data['path'])
-            #         # print(f"Arquivo removido: {removed_ref_data['path']}") # Log de debug se descomentado
+            #         # print(f"Arquivo removido: {removed_ref_data['path']}")  # Log de debug se descomentado
             # except Exception as e:
-            #     # print(f"Erro ao remover arquivo {removed_ref_data['path']}: {e}") # Log de debug se descomentado
+            #     # print(f"Erro ao remover arquivo {removed_ref_data['path']}: {e}")  # Log de debug se descomentado
             #     QMessageBox.warning(
             #         self,
             #         "Erro ao Remover Arquivo",
@@ -1674,7 +1671,7 @@ class ReferenceManagerWidget(QWidget):
 # REMOVIDO BLOCO if __name__ == '__main__':
 
 # REMOVIDO: app = QApplication(sys.argv)
-# REMOVIDO: # Para testar o tema, carregar o QSS globalmente se este arquivo for executado sozinho
+# REMOVIDO:  # Para testar o tema, carregar o QSS globalmente se este arquivo for executado sozinho
 # REMOVIDO: try:
 # REMOVIDO:     # Ajustando o caminho relativo para o QSS no teste individual
 # REMOVIDO:     with open('../themes/modern_dark_obs.qss', 'r') as f:
