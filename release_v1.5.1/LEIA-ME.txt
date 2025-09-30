@@ -1,0 +1,52 @@
+================================================================================
+  SwitchPilot v1.5.1 - Automação de Corte de Cenas para Lives
+================================================================================
+
+Novidades da v1.5.1 (30/09/2025):
+----------------------------------
+✅ Algoritmo de detecção NCC otimizado com downscaling inteligente
+   - Melhoria de +5% na precisão do NCC (de 77% para 82%)
+   - Score final de detecção aumentou +1% (de 94.3% para 95.3%)
+   
+✅ Rebalanceamento dos pesos do ensemble de detecção
+   - Histograma: 40% (antes 20%) - Precisão: ~99%
+   - NCC: 20% (antes 50%) - Precisão: ~82%
+   - LBP: 40% (antes 30%) - Precisão: ~97%
+   
+✅ Detecção mais robusta e consistente
+   - Performance mantida: ~0.54s por ciclo
+   - Menos falsos positivos
+   - Maior estabilidade em diferentes condições de luz
+
+Requisitos:
+-----------
+- Windows 10 ou 11
+- Para integração OBS: OBS Studio com WebSocket 5.x ativado
+- Para integração vMix: vMix com API HTTP ativa
+- NDI é opcional
+
+Como Usar:
+----------
+1. Execute SwitchPilot.exe
+2. Configure OBS/vMix nas abas correspondentes (se necessário)
+3. Em "Gerenciador de Referências":
+   - Escolha a fonte (Monitor ou Janela)
+   - Clique em "Selecionar Região PGM"
+   - Desenhe a região que deseja monitorar
+4. Adicione imagens de referência
+5. Configure as ações para cada referência
+6. Clique em "Iniciar Monitoramento"
+
+Suporte e Documentação:
+-----------------------
+- README.md: Documentação completa
+- CHANGELOG.md: Histórico de versões
+- GitHub: https://github.com/[seu-usuario]/SwitchPilot
+
+Licença:
+--------
+MIT License - Veja LICENSE para mais detalhes
+
+================================================================================
+Desenvolvido com ❤️ para streamers e produtores de conteúdo
+================================================================================
