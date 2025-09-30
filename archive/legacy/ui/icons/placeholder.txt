@@ -1,2 +1,0 @@
-# Este arquivo é apenas um placeholder para garantir que a pasta ui/icons exista.
-# Você pode deletá-lo depois de adicionar os ícones reais. 

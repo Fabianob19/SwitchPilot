@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.5.1 (2025-09-30)
+### Otimizações de Desempenho
+- **Algoritmo NCC Otimizado**: Implementado downscaling inteligente (128x128) no cálculo do NCC, resultando em:
+  - Melhoria de +5% na precisão do NCC (de 77% para 82%)
+  - Aumento de +1% no score final de detecção (de 94.3% para 95.3%)
+  - Detecção mais robusta e consistente
+  - Velocidade de processamento mantida (~0.54s por ciclo)
+- **Ajuste de Pesos do Ensemble**: Rebalanceamento dos pesos das métricas de similaridade:
+  - Histograma: 20% → 40% (maior peso em métrica estável)
+  - NCC: 50% → 20% (redução de peso em métrica mais variável)
+  - LBP: 30% → 40% (maior peso em detecção de textura)
+  - Resultado: Score de detecção subiu de 0.846 para 0.943-0.956
+- **Limpeza de Projeto**: Removidos arquivos não relacionados (scripts de rede, configurações Kali, etc)
+
+### Melhorias Técnicas
+- Downscaling com INTER_AREA para melhor qualidade na redução de imagens
+- Código otimizado com backup da versão original em comentários
+- Documentação técnica atualizada com métricas de performance
+
 ## v1.5.0-beta1 (2025-09-17)
 - Primeira versão beta oficial.
 - Título personalizado escuro com botões (min/max/fechar) e menubar separada.

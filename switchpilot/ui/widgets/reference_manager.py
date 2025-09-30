@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
     QDialog,
     QMenu,
     QAction,
+    QApplication,
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 import pyautogui  # Adicionada importação
@@ -26,6 +27,9 @@ import numpy as np  # Adicionada importação
 import os  # Adicionada importação
 import re # Para sanitizar nomes de arquivo
 import shutil # Adicionada importação para cópia de arquivos
+import time
+import ctypes
+from ctypes import wintypes
 # import NDIlib as NDI # Adicionada importação para NDI
 try:
     import NDIlib as NDI
@@ -35,6 +39,22 @@ except Exception:
     NDI_AVAILABLE = False
 
 from .action_config_dialog import ActionConfigDialog # Adicionada importação
+
+def safe_print(message):
+    """Imprime sem quebrar o app quando o console não suporta caracteres.
+
+    Se houver erro de codificação (cp1252), silencia o print.
+    """
+    try:
+        print(message)
+    except Exception:
+        try:
+            # Tenta ignorar caracteres não representáveis
+            text = str(message)
+            text = text.encode('cp1252', errors='ignore').decode('cp1252', errors='ignore')
+            print(text)
+        except Exception:
+            pass
 
 class ReferenceManagerWidget(QWidget):
     """Widget para gerenciar as imagens de referência para monitoramento."""
@@ -213,22 +233,25 @@ class ReferenceManagerWidget(QWidget):
         """Permite ao usuário selecionar uma região da tela, janela ou fonte NDI para monitoramento PGM."""
         try:
             source_type = self.source_type_combo.currentText()
-            print(f"[DEBUG] Tipo de fonte selecionado: {source_type}")
+            safe_print(f"[DEBUG] Tipo de fonte selecionado: {source_type}")
 
             if source_type == "Monitor":
-                print("[DEBUG] Iniciando captura de Monitor...")
+                safe_print("[DEBUG] Iniciando captura de Monitor...")
                 selected_monitor_idx = self.monitor_list_combo.currentIndex()
-                print(f"[DEBUG] Índice do monitor selecionado: {selected_monitor_idx}")
+                safe_print(f"[DEBUG] Índice do monitor selecionado: {selected_monitor_idx}")
 
-        if (
-            selected_monitor_idx < 0
-            or self.monitor_list_combo.itemText(selected_monitor_idx)
-            == "Nenhum monitor encontrado"
-        ):
-                    QMessageBox.warning(self, "Seleção de Monitor", "Por favor, selecione um monitor válido na lista.")
+                if (
+                    selected_monitor_idx < 0
+                    or self.monitor_list_combo.itemText(selected_monitor_idx)
+                    == "Nenhum monitor encontrado"
+                ):
+                    QMessageBox.warning(
+                        self,
+                        "Seleção de Monitor",
+                        "Por favor, selecione um monitor válido na lista.",
+                    )
                     return
 
-                import mss
                 with mss.mss() as sct:
                     monitor_number = selected_monitor_idx + 1  # sct.monitors[0] é informação geral
                     if monitor_number >= len(sct.monitors):
@@ -236,21 +259,21 @@ class ReferenceManagerWidget(QWidget):
                         return
 
                     monitor = sct.monitors[monitor_number]
-                    print(f"[DEBUG] Monitor selecionado: {monitor}")
+                    safe_print(f"[DEBUG] Monitor selecionado: {monitor}")
 
                     screenshot = sct.grab(monitor)
                     img_to_show = np.array(screenshot)
                     img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGRA2BGR)
-                    print(f"[DEBUG] Screenshot capturado: {img_to_show.shape}")
+                    safe_print(f"[DEBUG] Screenshot capturado: {img_to_show.shape}")
 
                 capture_source_name = f"Monitor {monitor_number}"
                 source_id = monitor_number
                 source_kind = 'monitor'
 
             elif source_type == "Janela":
-                print("[DEBUG] Iniciando captura de Janela...")
+                safe_print("[DEBUG] Iniciando captura de Janela...")
                 selected_window_idx = self.window_list_combo.currentIndex()
-                print(f"[DEBUG] Índice da janela selecionada: {selected_window_idx}")
+                safe_print(f"[DEBUG] Índice da janela selecionada: {selected_window_idx}")
 
                 if (
                     selected_window_idx < 0
@@ -264,7 +287,7 @@ class ReferenceManagerWidget(QWidget):
                     return
 
                 window_obj = self.window_list_combo.itemData(selected_window_idx)
-                print(f"[DEBUG] Objeto da janela: {window_obj}")
+                safe_print("[DEBUG] Objeto da janela selecionada.")
 
                 if not window_obj:
                     QMessageBox.warning(
@@ -279,10 +302,13 @@ class ReferenceManagerWidget(QWidget):
                 # É importante que window_obj.left, top, width, height sejam válidos.
                 # Alguns sistemas/janelas podem retornar (0,0,0,0) se não estiverem visíveis/ativas.
                 # Adicionando uma verificação extra.
-                print(
-                    f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, "
-                    f"width={window_obj.width}, height={window_obj.height}"
-                )
+                try:
+                    safe_print(
+                        f"[DEBUG] Coordenadas da janela: left={window_obj.left}, top={window_obj.top}, "
+                        f"width={window_obj.width}, height={window_obj.height}"
+                    )
+                except Exception:
+                    safe_print("[DEBUG] Coordenadas da janela (caracteres especiais no título ocultos).")
 
                 if (
                     window_obj.left is None
@@ -300,22 +326,38 @@ class ReferenceManagerWidget(QWidget):
                     )
                     return
 
-                region_capture = (window_obj.left, window_obj.top, window_obj.width, window_obj.height)
-                print(f"[DEBUG] Região de captura: {region_capture}")
+                region_capture = (
+                    window_obj.left,
+                    window_obj.top,
+                    window_obj.width,
+                    window_obj.height,
+                )
+                safe_print(f"[DEBUG] Região de captura: {region_capture}")
 
-                pil_img = pyautogui.screenshot(region=region_capture)
-                img_to_show = np.array(pil_img)
-                img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_RGB2BGR)
-                print(f"[DEBUG] Screenshot da janela capturado: {img_to_show.shape}")
+                # Tentar captura robusta multi-monitor (MSS) e, se falhar/ficar preta,
+                # usar fallback via PrintWindow (pywin32) quando disponível.
+                img_to_show = self._capture_window_image(window_obj)
+                if img_to_show is None:
+                    QMessageBox.warning(
+                        self,
+                        "Erro de Captura",
+                        (
+                            "Falha ao capturar a imagem da janela selecionada. "
+                            "Tente trazer a janela para frente ou desativar aceleração "
+                            "de hardware no app alvo."
+                        ),
+                    )
+                    return
+                safe_print(f"[DEBUG] Screenshot da janela capturado: {img_to_show.shape}")
 
                 capture_source_name = f"Janela: {window_obj.title}"
                 source_id = window_obj  # Ou window_obj._hWnd se precisarmos de um ID simples e tiver no objeto
                 source_kind = 'window'
 
             elif source_type == "NDI":
-                print("[DEBUG] Iniciando captura NDI...")
+                safe_print("[DEBUG] Iniciando captura NDI...")
                 selected_ndi_idx = self.ndi_list_combo.currentIndex()
-                print(f"[DEBUG] Índice da fonte NDI selecionada: {selected_ndi_idx}")
+                safe_print(f"[DEBUG] Índice da fonte NDI selecionada: {selected_ndi_idx}")
 
                 if (
                     selected_ndi_idx < 0
@@ -326,11 +368,15 @@ class ReferenceManagerWidget(QWidget):
                         "Erro ao listar fontes NDI",
                     ]
                 ):
-                    QMessageBox.warning(self, "Seleção de Fonte", "Por favor, selecione uma fonte NDI válida na lista.")
+                    QMessageBox.warning(
+                        self,
+                        "Seleção de Fonte",
+                        "Por favor, selecione uma fonte NDI válida na lista.",
+                    )
                     return
 
                 ndi_source = self.ndi_list_combo.itemData(selected_ndi_idx)
-                print(f"[DEBUG] Dados da fonte NDI: {ndi_source}")
+                safe_print(f"[DEBUG] Dados da fonte NDI: {ndi_source}")
 
                 if not ndi_source:
                     QMessageBox.warning(
@@ -340,10 +386,10 @@ class ReferenceManagerWidget(QWidget):
                     )
                     return
 
-                print("[DEBUG] Chamando _capture_ndi_frame...")
+                safe_print("[DEBUG] Chamando _capture_ndi_frame...")
                 # Capturar frame da fonte NDI
                 img_to_show = self._capture_ndi_frame(ndi_source)
-                print(f"[DEBUG] Resultado da captura NDI: {img_to_show.shape if img_to_show is not None else 'None'}")
+                safe_print(f"[DEBUG] Resultado da captura NDI: {img_to_show.shape if img_to_show is not None else 'None'}")
 
                 if img_to_show is None:
                     QMessageBox.warning(self, "Erro NDI", "Não foi possível capturar frame da fonte NDI selecionada.")
@@ -356,8 +402,13 @@ class ReferenceManagerWidget(QWidget):
                 QMessageBox.warning(self, "Seleção de Fonte", "Tipo de fonte de captura desconhecido.")
                 return
 
-            print(f"[DEBUG] Imagem capturada com sucesso: {img_to_show.shape}")
-            print(f"[DEBUG] Fonte: {capture_source_name}")
+            safe_print(f"[DEBUG] Imagem capturada com sucesso: {img_to_show.shape}")
+            try:
+                # Evitar problemas de encoding com títulos/janelas com caracteres especiais
+                safe_title = re.sub(r"[^\x20-\x7E]", "?", str(capture_source_name))
+                safe_print(f"[DEBUG] Fonte: {safe_title}")
+            except Exception:
+                pass
 
             if img_to_show is not None:
                 try:
@@ -370,7 +421,8 @@ class ReferenceManagerWidget(QWidget):
                     if not img_to_show.flags['C_CONTIGUOUS']:
                         img_to_show = np.ascontiguousarray(img_to_show)
 
-                    window_name = f"Selecione a Região PGM - {capture_source_name}"
+                    # Evitar caracteres especiais no título da janela do OpenCV
+                    window_name = "Selecione a Região PGM"
                     # Reduzir para caber na tela sem perder proporção e depois remapear a ROI
                     h, w = img_to_show.shape[:2]
                     # Tentar manter 1:1 se couber na tela atual
@@ -388,7 +440,24 @@ class ReferenceManagerWidget(QWidget):
                         # Interpolation voltada à nitidez (nearest) na visualização
                         display_img = cv2.resize(img_to_show, (int(w*scale), int(h*scale)), interpolation=cv2.INTER_NEAREST)
                     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-                    cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+                    # Definir tamanho exato da janela para o display_img calculado
+                    try:
+                        disp_h, disp_w = display_img.shape[:2]
+                        cv2.resizeWindow(window_name, int(disp_w), int(disp_h))
+                    except Exception:
+                        pass
+                    # Trazer para frente
+                    try:
+                        cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+                    except Exception:
+                        pass
+                    # Centralizar aproximadamente na tela principal
+                    try:
+                        cx = max(0, int((screen_w - disp_w) / 2))
+                        cy = max(0, int((screen_h - disp_h) / 2))
+                        cv2.moveWindow(window_name, cx, cy)
+                    except Exception:
+                        pass
                     roi_disp = cv2.selectROI(window_name, display_img, False, False)
                     # Remapear de volta para o frame original usado na análise
                     roi = (int(roi_disp[0] / scale), int(roi_disp[1] / scale), int(roi_disp[2] / scale), int(roi_disp[3] / scale))
@@ -402,6 +471,11 @@ class ReferenceManagerWidget(QWidget):
                         pass
 
                     QMessageBox.critical(self, "Erro OpenCV", f"Erro ao selecionar região: {cv_error}")
+                    try:
+                        # Garantir que a janela principal reapareça caso tenha sido ocultada
+                        QTimer.singleShot(300, self._ensure_main_window_visible)
+                    except Exception:
+                        pass
                     return
 
                 if roi and roi[2] > 0 and roi[3] > 0:  # roi = (x, y, w, h)
@@ -530,6 +604,410 @@ class ReferenceManagerWidget(QWidget):
             self.pgm_region_label.setStyleSheet("font-style: italic; color: #bf616a;")
             # REMOVIDO: import traceback
             # REMOVIDO: traceback.print_exc()
+        finally:
+            try:
+                QTimer.singleShot(200, self._ensure_main_window_visible)
+            except Exception:
+                pass
+
+    def _capture_window_image(self, window_obj):
+        """Captura uma imagem BGR da janela, robusta a multi-monitor e sobreposição.
+
+        Estratégia:
+        1) Preferir PrintWindow (pywin32) para evitar sobreposição e capturar janela oculta.
+           Se minimizada, tentar PrintWindow; se falhar, restaurar, capturar e re-minimizar.
+        2) Se PrintWindow indisponível/falhar, usar MSS na região do desktop virtual.
+        3) Último recurso: pyautogui.screenshot.
+        """
+        our_qt_win = self.window()
+        # Não vamos mais alterar a opacidade da nossa janela para evitar ficar invisível
+        def _restore_our_window():
+            return None
+
+        # 1) Primeiro: PrintWindow, com restauração segura e nossa janela oculta temporariamente
+        hwnd = getattr(window_obj, '_hWnd', None) or getattr(window_obj, 'hWnd', None)
+        try:
+            if hwnd:
+                img = self._capture_window_via_printwindow(hwnd)
+                if img is not None and img.size > 0 and np.any(img):
+                    return img
+
+                # Se a janela estiver minimizada, restaurar rapidamente e tentar de novo
+                try:
+                    import win32gui  # type: ignore
+                    import win32con  # type: ignore
+                    is_minimized = False
+                    try:
+                        is_minimized = win32gui.IsIconic(hwnd)
+                    except Exception:
+                        pass
+                    if is_minimized:
+                        # Restaurar e mover para fora da área visível, capturar e devolver
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                        try:
+                            with mss.mss() as sct_v:
+                                v = sct_v.monitors[0]
+                                v_left = int(v.get('left', 0))
+                                v_top = int(v.get('top', 0))
+                                v_right = v_left + int(v.get('width', 0))
+                                v_bottom = v_top + int(v.get('height', 0))
+                        except Exception:
+                            v_left, v_top, v_right, v_bottom = (0, 0, 3840, 2160)
+
+                        try:
+                            l, t, r, b = win32gui.GetWindowRect(hwnd)
+                            w, h = max(100, r - l), max(80, b - t)
+                        except Exception:
+                            l, t, w, h = 0, 0, 1280, 720
+
+                        off_x = v_right + 200
+                        off_y = v_bottom + 200
+                        try:
+                            win32gui.SetWindowPos(
+                                hwnd,
+                                win32con.HWND_NOTOPMOST,
+                                off_x,
+                                off_y,
+                                w,
+                                h,
+                                win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW,
+                            )
+                        except Exception:
+                            pass
+
+                        # Redesenhar e capturar off-screen
+                        try:
+                            RDW_INVALIDATE = 0x0001
+                            RDW_UPDATENOW = 0x0100
+                            RDW_ALLCHILDREN = 0x0080
+                            win32gui.RedrawWindow(
+                                hwnd, None, None, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN
+                            )
+                        except Exception:
+                            pass
+                        time.sleep(0.2)
+                        img = self._capture_window_via_printwindow(hwnd)
+                        # Re-minimizar se estava minimizada antes
+                        try:
+                            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                        except Exception:
+                            pass
+                        if img is not None and img.size > 0 and np.any(img):
+                            return img
+                        # Se ainda veio preto, último fallback: trazer topmost 120ms e capturar via MSS
+                        try:
+                            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+                            width = max(0, right - left)
+                            height = max(0, bottom - top)
+                            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, left, top, width, height, win32con.SWP_SHOWWINDOW)
+                            time.sleep(0.12)
+                            with mss.mss() as sct_tmp:
+                                raw = sct_tmp.grab({'left': left, 'top': top, 'width': width, 'height': height})
+                                mss_img = cv2.cvtColor(np.array(raw), cv2.COLOR_BGRA2BGR)
+                            # Re-minimizar novamente
+                            try:
+                                win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                            except Exception:
+                                pass
+                            if mss_img is not None and mss_img.size > 0 and np.any(mss_img):
+                                return mss_img
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        finally:
+            _restore_our_window()
+            try:
+                QTimer.singleShot(150, self._ensure_main_window_visible)
+            except Exception:
+                pass
+
+        # 2) Tentativa com MSS contra a área virtual (todos monitores) gerenciando Z-order e ocultando nossa UI
+        try:
+            with mss.mss() as sct:
+                virtual = sct.monitors[0]
+                v_left = int(virtual.get('left', 0))
+                v_top = int(virtual.get('top', 0))
+                v_right = v_left + int(virtual.get('width', 0))
+                v_bottom = v_top + int(virtual.get('height', 0))
+
+                w_left = int(getattr(window_obj, 'left', 0))
+                w_top = int(getattr(window_obj, 'top', 0))
+                w_width = int(getattr(window_obj, 'width', 0))
+                w_height = int(getattr(window_obj, 'height', 0))
+                w_right = w_left + w_width
+                w_bottom = w_top + w_height
+
+                # Se janela estiver minimizada (coordenadas -32000, -32000 são típicas),
+                # ou se houver risco de sobreposição, tentar trazer para topo (topmost)
+                # e esconder nossa janela momentaneamente.
+                try:
+                    import win32gui  # type: ignore
+                    import win32con  # type: ignore
+                    hwnd = getattr(window_obj, '_hWnd', None) or getattr(window_obj, 'hWnd', None)
+                    our_prev_opacity = None
+
+                    if hwnd:
+                        is_minimized = False
+                        try:
+                            is_minimized = win32gui.IsIconic(hwnd)
+                        except Exception:
+                            pass
+
+                        # Guardar posição original
+                        try:
+                            orig_rect = win32gui.GetWindowRect(hwnd)
+                        except Exception:
+                            orig_rect = (w_left, w_top, w_right, w_bottom)
+
+                        # Não ocultar nossa janela; apenas elevar a janela alvo
+
+                        # Trazer janela alvo para frente (topmost) e posicionar visível
+                        try:
+                            target_left = max(v_left + 20, v_left)
+                            target_top = max(v_top + 20, v_top)
+                            win32gui.SetWindowPos(
+                                hwnd,
+                                win32con.HWND_TOPMOST,
+                                target_left,
+                                target_top,
+                                max(100, w_width),
+                                max(100, w_height),
+                                win32con.SWP_SHOWWINDOW,
+                            )
+                            try:
+                                win32gui.SetForegroundWindow(hwnd)
+                                win32gui.BringWindowToTop(hwnd)
+                            except Exception:
+                                pass
+                            time.sleep(0.15)
+                            # Atualizar bounding box após mover
+                            try:
+                                w_left, w_top, w_right, w_bottom = win32gui.GetWindowRect(hwnd)
+                                w_width = max(0, w_right - w_left)
+                                w_height = max(0, w_bottom - w_top)
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
+
+                        # Após captura, restaurar estado e nossa janela
+                        def _restore_state():
+                            try:
+                                # Remover topmost e voltar posição original
+                                win32gui.SetWindowPos(
+                                    hwnd,
+                                    win32con.HWND_NOTOPMOST,
+                                    orig_rect[0],
+                                    orig_rect[1],
+                                    max(100, orig_rect[2] - orig_rect[0]),
+                                    max(100, orig_rect[3] - orig_rect[1]),
+                                    win32con.SWP_SHOWWINDOW,
+                                )
+                            except Exception:
+                                pass
+                            try:
+                                if is_minimized:
+                                    win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+                            except Exception:
+                                pass
+                            try:
+                                if our_qt_win is not None and our_prev_opacity is not None:
+                                    our_qt_win.setWindowOpacity(our_prev_opacity)
+                                    QApplication.processEvents()
+                            except Exception:
+                                pass
+                except Exception:
+                    def _restore_state():
+                        return None
+
+                i_left = max(w_left, v_left)
+                i_top = max(w_top, v_top)
+                i_right = min(w_right, v_right)
+                i_bottom = min(w_bottom, v_bottom)
+                i_width = i_right - i_left
+                i_height = i_bottom - i_top
+
+                if i_width > 0 and i_height > 0:
+                    region = {
+                        'left': i_left,
+                        'top': i_top,
+                        'width': i_width,
+                        'height': i_height,
+                    }
+                    raw = sct.grab(region)
+                    frame = np.array(raw)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+
+                    # Se a região intersectada for menor (por estar parcialmente fora da tela),
+                    # redimensionar para o tamanho esperado para manter consistência visual.
+                    if (i_width != w_width) or (i_height != w_height):
+                        frame = cv2.copyMakeBorder(
+                            frame,
+                            top=max(0, w_top - i_top),
+                            bottom=max(0, i_bottom - w_bottom),
+                            left=max(0, w_left - i_left),
+                            right=max(0, i_right - w_right),
+                            borderType=cv2.BORDER_CONSTANT,
+                            value=(0, 0, 0),
+                        )
+                        # Ajustar para exatamente (w_height, w_width) se necessário
+                        frame = frame[:max(0, w_height), :max(0, w_width)]
+
+                    try:
+                        _restore_state()
+                    except Exception:
+                        pass
+
+                    if frame.size > 0:
+                        return frame
+        except Exception:
+            pass
+
+        # 3) Último recurso: pyautogui.screenshot (pode falhar para multi-monitor/minimizada)
+        try:
+            region = (
+                int(getattr(window_obj, 'left', 0)),
+                int(getattr(window_obj, 'top', 0)),
+                int(getattr(window_obj, 'width', 0)),
+                int(getattr(window_obj, 'height', 0)),
+            )
+            pil_img = pyautogui.screenshot(region=region)
+            arr = np.array(pil_img)
+            arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            if arr.size > 0:
+                return arr
+        except Exception:
+            pass
+
+        return None
+
+    def _capture_window_via_printwindow(self, hwnd):
+        """Captura o conteúdo de uma janela via PrintWindow (Windows) retornando imagem BGR.
+
+        Requer pywin32. Retorna None se indisponível ou em caso de erro.
+        """
+        try:
+            import win32gui  # type: ignore
+            import win32ui  # type: ignore
+            import win32con  # type: ignore
+        except Exception:
+            return None
+
+        try:
+            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+            width = max(0, right - left)
+            height = max(0, bottom - top)
+            if width == 0 or height == 0:
+                return None
+
+            hwnd_dc = win32gui.GetWindowDC(hwnd)
+            src_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+            mem_dc = src_dc.CreateCompatibleDC()
+
+            bmp = win32ui.CreateBitmap()
+            bmp.CreateCompatibleBitmap(src_dc, width, height)
+            mem_dc.SelectObject(bmp)
+
+            # 1 = PW_CLIENTONLY, 2 = PW_RENDERFULLCONTENT → 3 costuma dar melhor resultado em apps GPU
+            try:
+                # Forçar redraw antes do PrintWindow
+                try:
+                    RDW_INVALIDATE = 0x0001
+                    RDW_UPDATENOW = 0x0100
+                    RDW_ALLCHILDREN = 0x0080
+                    win32gui.RedrawWindow(hwnd, None, None, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN)
+                except Exception:
+                    pass
+                result = win32gui.PrintWindow(hwnd, mem_dc.GetSafeHdc(), 3)
+            except Exception:
+                result = 0
+
+            # Extrair pixels do bitmap
+            bmp_info = bmp.GetInfo()
+            bmp_str = bmp.GetBitmapBits(True)
+
+            # Liberar DCs independentemente do resultado
+            mem_dc.DeleteDC()
+            src_dc.DeleteDC()
+            win32gui.ReleaseDC(hwnd, hwnd_dc)
+
+            # Evitar vazamento de GDI
+            try:
+                win32gui.DeleteObject(bmp.GetHandle())
+            except Exception:
+                pass
+
+            if not result:
+                return None
+
+            img = np.frombuffer(bmp_str, dtype=np.uint8)
+            img = img.reshape((bmp_info['bmHeight'], bmp_info['bmWidth'], 4))
+            # BGRA -> BGR
+            bgr = img[:, :, :3].copy()
+
+            # Tentar recortar bordas (barra de título/sombra) usando DWM
+            try:
+                DWMWA_EXTENDED_FRAME_BOUNDS = 9
+                rect = wintypes.RECT()
+                if ctypes.windll.dwmapi.DwmGetWindowAttribute(int(hwnd), DWMWA_EXTENDED_FRAME_BOUNDS, ctypes.byref(rect), ctypes.sizeof(rect)) == 0:
+                    ext_left, ext_top, ext_right, ext_bottom = rect.left, rect.top, rect.right, rect.bottom
+                    crop_left = max(0, ext_left - left)
+                    crop_top = max(0, ext_top - top)
+                    crop_right = max(0, right - ext_right)
+                    crop_bottom = max(0, bottom - ext_bottom)
+                    y0 = crop_top
+                    x0 = crop_left
+                    y1 = bgr.shape[0] - crop_bottom
+                    x1 = bgr.shape[1] - crop_right
+                    if 0 <= x0 < x1 and 0 <= y0 < y1:
+                        bgr = bgr[y0:y1, x0:x1]
+            except Exception:
+                pass
+
+            # Ajuste fino: recortar para a área do cliente, se maior precisão
+            try:
+                import win32gui  # type: ignore
+                # Client rect em coords de cliente
+                cr_left, cr_top, cr_right, cr_bottom = win32gui.GetClientRect(hwnd)
+                # Converter (0,0) e (right,bottom) para coords de tela
+                pt1 = win32gui.ClientToScreen(hwnd, (0, 0))
+                pt2 = win32gui.ClientToScreen(hwnd, (cr_right, cr_bottom))
+                cl_left, cl_top = pt1
+                cl_right, cl_bottom = pt2
+                # Calcular offsets relativos à imagem capturada com PrintWindow
+                off_left = max(0, cl_left - left)
+                off_top = max(0, cl_top - top)
+                off_right = max(0, right - cl_right)
+                off_bottom = max(0, bottom - cl_bottom)
+                y0 = off_top
+                x0 = off_left
+                y1 = bgr.shape[0] - off_bottom
+                x1 = bgr.shape[1] - off_right
+                if 0 <= x0 < x1 and 0 <= y0 < y1:
+                    bgr = bgr[y0:y1, x0:x1]
+            except Exception:
+                pass
+
+            # Se a imagem estiver praticamente preta, tratar como falha
+            try:
+                if bgr.size == 0 or np.std(bgr) < 1.0:
+                    return None
+            except Exception:
+                pass
+            return bgr
+        except Exception:
+            return None
+
+    def _ensure_main_window_visible(self):
+        try:
+            win = self.window()
+            if win is not None and getattr(win, 'windowOpacity', None):
+                if win.windowOpacity() < 0.9:
+                    win.setWindowOpacity(1.0)
+                    QApplication.processEvents()
+        except Exception:
+            pass
 
     def _pick_window_by_click(self):
         """Seleciona automaticamente a janela sob o cursor após um pequeno atraso."""

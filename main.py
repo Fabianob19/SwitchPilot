@@ -1,8 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
-from switchpilot.ui.main_window import MainWindow # Nova MainWindow
-from switchpilot.core.main_controller import MainController # Importar MainController
+from switchpilot.ui.main_window import MainWindow  # Nova MainWindow
+from switchpilot.core.main_controller import MainController  # Importar MainController
 import subprocess
 
 # Definir AppUserModelID e ícone no Windows para evitar ícone do Python na barra de tarefas
@@ -22,13 +22,16 @@ except Exception:
     pass
 
 
-
 def get_git_version():
     try:
-        version = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"], stderr=subprocess.STDOUT).decode().strip()
+        version = subprocess.check_output(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            stderr=subprocess.STDOUT,
+        ).decode().strip()
         return version
     except Exception:
         return "v1.3.0"
+
 
 if __name__ == "__main__":
     # Ativar atributos de High DPI do Qt ANTES do QApplication
@@ -50,14 +53,14 @@ if __name__ == "__main__":
     except Exception:
         pass
 
-    version = "v1.5.0-beta1"  # Primeira versão beta oficial
+    version = "v1.5.1"  # Otimizações de detecção NCC
     main_win = MainWindow(version=version)
     main_win.show()
 
     # Obter as instâncias dos widgets da MainWindow
     # É crucial que os nomes dos atributos em MainWindow (ex: main_win.reference_manager_widget)
     # correspondam aos nomes usados ao criar/atribuir esses widgets dentro de MainWindow._setup_ui()
-    ref_manager = main_win.reference_manager_widget 
+    ref_manager = main_win.reference_manager_widget
     mon_control = main_win.monitoring_control_widget
     obs_cfg_widget = main_win.obs_config_widget
     vmix_cfg_widget = main_win.vmix_config_widget
@@ -76,7 +79,7 @@ if __name__ == "__main__":
     # Passar a instância da MainWindow para o controller para que ele possa acessá-la
     # se necessário, ou acessar seus widgets diretamente.
     main_controller = MainController(
-        ref_manager_widget=ref_manager, 
+        ref_manager_widget=ref_manager,
         mon_control_widget=mon_control,
         obs_config_widget=obs_cfg_widget,
         vmix_config_widget=vmix_cfg_widget
@@ -93,7 +96,7 @@ if __name__ == "__main__":
     # (Esta é uma forma de fazer isso. Outra seria o controller se conectar diretamente
     #  aos widgets através da referência main_win, o que já está sendo feito para
     #  sinais da UI para o Core dentro do __init__ do MainController)
-    main_controller.connect_to_ui_slots() # Conecta sinais do core para a UI
+    main_controller.connect_to_ui_slots()  # Conecta sinais do core para a UI
 
     # 4. Conectar o sinal de aboutToQuit da aplicação ao método de cleanup do controller
     app.aboutToQuit.connect(main_controller.cleanup)

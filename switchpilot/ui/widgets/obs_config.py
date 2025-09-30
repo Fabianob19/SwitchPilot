@@ -94,4 +94,4 @@ class OBSConfigWidget(QWidget):
         """Define a configuração do widget."""
         self.host_input.setText(config.get('host', 'localhost'))
         self.port_input.setText(config.get('port', '4455'))
-        self.password_input.setText(config.get('password', '')) 
+        self.password_input.setText(config.get('password', ''))
