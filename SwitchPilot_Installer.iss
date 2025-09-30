@@ -51,6 +51,8 @@ Name: "quicklaunchicon"; Description: "Criar ícone na Barra de Tarefas"; GroupD
 [Files]
 ; Arquivos principais (toda a pasta release_v1.5.1)
 Source: "release_v1.5.1\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Ícone do aplicativo (garantir que seja copiado)
+Source: "{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Arquivos de documentação
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -58,12 +60,12 @@ Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Atalho no Menu Iniciar
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ICONE.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIconName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 ; Atalho na Área de Trabalho
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ICONE.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIconName}"; Tasks: desktopicon
 ; Atalho na Barra de Tarefas (Quick Launch)
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ICONE.ico"; Tasks: quicklaunchicon
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIconName}"; Tasks: quicklaunchicon
 
 [Run]
 ; Executar após instalação
