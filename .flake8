@@ -18,12 +18,17 @@ exclude =
     *.egg-info
 
 # Ignorar alguns erros específicos
+# E203: whitespace before ':'
+# W503: line break before binary operator
+# E501: line too long (já controlado por max-line-length)
 ignore = 
-    E203,  # whitespace before ':'
-    W503,  # line break before binary operator
-    E501,  # line too long (já controlado por max-line-length)
+    E203,
+    W503,
+    E501
 
 # Configurações por arquivo
+# __init__.py: F401=imports não usados, F403=wildcard imports
+# main.py: E402=imports após código
 per-file-ignores =
-    __init__.py:F401,F403  # imports não usados em __init__.py são OK
-    main.py:E402  # imports após código são OK no main
+    __init__.py:F401,F403
+    main.py:E402
