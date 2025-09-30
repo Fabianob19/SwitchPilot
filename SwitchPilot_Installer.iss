@@ -22,7 +22,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=LICENSE
-InfoBeforeFile=release_v1.5.1\LEIA-ME.txt
+;InfoBeforeFile=release_v1.5.1\LEIA-ME.txt
 ; Saída do instalador
 OutputDir=installer_output
 OutputBaseFilename=SwitchPilot_v{#MyAppVersion}_Setup
@@ -34,8 +34,8 @@ WizardStyle=modern
 SetupIconFile={#MyAppIconName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; Requisitos
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 PrivilegesRequired=lowest
 ; Idioma
@@ -59,7 +59,6 @@ Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 ; Atalho no Menu Iniciar
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ICONE.ico"
-Name: "{group}\Leia-me"; Filename: "{app}\LEIA-ME.txt"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 ; Atalho na Área de Trabalho
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ICONE.ico"; Tasks: desktopicon
