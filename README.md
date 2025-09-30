@@ -47,16 +47,19 @@ python main.py
 Diagrama (alto nível):
 ```mermaid
 flowchart LR
-  A[Captura (Monitor/Janela/NDI)] --> B[Pré-processamento ROI]
-  B --> C[Similaridade (Hist + NCC + LBP)]
-  C -->|match| D[Decisão temporal (K/M/histerese)]
-  D -->|true| E[Executores (OBS/vMix)]
-  D -->|false| F[Loop próximo frame]
+  A[Captura Monitor Janela NDI] --> B[Pre processamento ROI]
+  B --> C[Similaridade Hist NCC LBP]
+  C -->|match| D[Decisao temporal]
+  D -->|true| E[Executores OBS vMix]
+  D -->|false| F[Loop proximo frame]
   subgraph UI
-    U1[MainWindow] -- configura --> U2[ReferenceManager]
-    U1 -- monitora --> U3[Log]
+    U1[MainWindow]
+    U2[ReferenceManager]
+    U3[Log]
+    U1 --> U2
+    U1 --> U3
   end
-  U2 -- ROI/source --> A
+  U2 --> A
   E --> U3
 ```
 
