@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     # Verificação de instância única
     shared_memory = QSharedMemory("SwitchPilot_SingleInstance")
-    
+
     # Tentar criar memória compartilhada
     if not shared_memory.create(1):
         # Se já existe, significa que outra instância está rodando
@@ -72,14 +72,14 @@ if __name__ == "__main__":
         )
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg.setDefaultButton(QMessageBox.Yes)
-        
+
         yes_button = msg.button(QMessageBox.Yes)
         yes_button.setText("Sim, Fechar")
         no_button = msg.button(QMessageBox.No)
         no_button.setText("Não, Continuar Mesmo Assim")
-        
+
         result = msg.exec_()
-        
+
         if result == QMessageBox.Yes:
             sys.exit(0)
         # Se escolher "Não", continua normalmente (permite múltiplas instâncias para debug)

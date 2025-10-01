@@ -942,7 +942,6 @@ class MainWindow(QMainWindow):
         dlg.resize(900, 700)
         dlg.exec_()
 
-
     def _show_shortcuts(self):
         text = (
             "═══════════════════════════════════════════════════════════════════\n"
@@ -1004,7 +1003,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(buttons)
         dlg.resize(800, 700)
         dlg.exec_()
-
 
     def _show_changelog(self):
         path = resource_path('CHANGELOG.md') if os.path.exists('CHANGELOG.md') else None
