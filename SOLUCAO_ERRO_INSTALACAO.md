@@ -1,12 +1,16 @@
-# 🔴 SOLUÇÃO: Erro "Incapaz de executar o arquivo unins000.exe"
+# 🔴 SOLUÇÕES: Erros de Instalação do SwitchPilot
 
-## 📋 **O QUE É ESSE ERRO?**
+## 📋 **ERROS COMUNS:**
 
+### **Erro 1: "Incapaz de executar o arquivo unins000.exe"**
 Este erro aparece quando você tenta instalar uma nova versão do SwitchPilot, mas o Windows ainda tem registros de uma instalação antiga cujo desinstalador foi deletado ou corrompido.
+
+### **Erro 2: "Código 225 - Não possui o software adequado"**
+Este erro indica que faltam dependências do sistema Windows (Visual C++ Redistributable).
 
 ---
 
-## ✅ **SOLUÇÃO RÁPIDA (3 PASSOS):**
+## ✅ **SOLUÇÃO PARA ERRO "unins000.exe" (3 PASSOS):**
 
 ### **1️⃣ Delete a pasta antiga manualmente**
 
@@ -41,6 +45,28 @@ Delete os atalhos antigos:
 
 ---
 
+## ✅ **SOLUÇÃO PARA ERRO "CÓDIGO 225" (FALTAM DEPENDÊNCIAS):**
+
+### **Causa:**
+Falta o Microsoft Visual C++ Redistributable 2015-2022 (x64)
+
+### **Solução Automática:**
+1. Execute o novo instalador do SwitchPilot v1.5.1+
+2. Ele vai **detectar automaticamente** a falta da dependência
+3. Vai perguntar se quer **baixar e instalar**
+4. Clique em **"Sim"**
+5. Aguarde a instalação (~25 MB)
+6. Continue a instalação do SwitchPilot normalmente
+
+### **Solução Manual:**
+1. Baixe de: **https://aka.ms/vs/17/release/vc_redist.x64.exe**
+2. Execute o instalador baixado
+3. Clique em **"Instalar"**
+4. Aguarde a instalação terminar
+5. Execute o instalador do SwitchPilot novamente
+
+---
+
 ## 🎯 **SE AINDA DER ERRO:**
 
 ### **Limpeza Completa do Registro:**
@@ -62,11 +88,13 @@ Delete os atalhos antigos:
 
 ## 📢 **BOA NOTÍCIA:**
 
-A partir da **versão 1.5.1**, o instalador detecta e **corrige automaticamente** este problema! Se você baixou a versão mais recente, o instalador vai:
+A partir da **versão 1.5.1+**, o instalador detecta e **corrige automaticamente** estes problemas! O instalador inteligente vai:
 
 ✅ Detectar instalações antigas corrompidas  
 ✅ Limpar automaticamente o registro  
 ✅ Perguntar se quer desinstalar versões antigas  
+✅ Verificar se o Visual C++ Redistributable está instalado  
+✅ Oferecer download e instalação automática das dependências  
 ✅ Instalar sem erros  
 
 ---

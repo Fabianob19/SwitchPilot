@@ -77,6 +77,67 @@ Type: filesandordirs; Name: "{app}\switchpilot_config.json"
 
 [Code]
 // Código Pascal para funcionalidades extras
+
+// Verificar se o Visual C++ Redistributable está instalado
+function VCRedistInstalled(): Boolean;
+var
+  RegKey: String;
+begin
+  Result := False;
+  
+  // Verificar versões 2015-2022 (x64)
+  RegKey := 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\X64';
+  if RegKeyExists(HKEY_LOCAL_MACHINE, RegKey) then
+    Result := True
+  else
+  begin
+    // Verificar versão alternativa
+    RegKey := 'SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\X64';
+    if RegKeyExists(HKEY_LOCAL_MACHINE, RegKey) then
+      Result := True;
+  end;
+end;
+
+// Baixar e instalar VC++ Redistributable
+procedure InstallVCRedist();
+var
+  ResultCode: Integer;
+  DownloadPage: TDownloadWizardPage;
+begin
+  if not VCRedistInstalled() then
+  begin
+    if MsgBox('O SwitchPilot requer o Microsoft Visual C++ Redistributable.' + #13#10#13#10 +
+              'Deseja baixar e instalar automaticamente?' + #13#10#13#10 +
+              '(Recomendado: Sim)', 
+              mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      // Mostrar mensagem de download
+      MsgBox('O instalador irá baixar o Visual C++ Redistributable (~25 MB).' + #13#10 +
+             'Por favor, aguarde e siga as instruções do instalador.', 
+             mbInformation, MB_OK);
+      
+      // Tentar executar o download e instalação
+      if not ShellExec('open', 
+                       'https://aka.ms/vs/17/release/vc_redist.x64.exe',
+                       '', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
+      begin
+        MsgBox('Não foi possível baixar automaticamente.' + #13#10#13#10 +
+               'Por favor, baixe e instale manualmente de:' + #13#10 +
+               'https://aka.ms/vs/17/release/vc_redist.x64.exe' + #13#10#13#10 +
+               'Depois execute o instalador do SwitchPilot novamente.', 
+               mbError, MB_OK);
+      end;
+    end
+    else
+    begin
+      MsgBox('AVISO: Sem o Visual C++ Redistributable, o SwitchPilot pode não funcionar.' + #13#10#13#10 +
+             'Se encontrar erros ao executar, instale de:' + #13#10 +
+             'https://aka.ms/vs/17/release/vc_redist.x64.exe', 
+             mbInformation, MB_OK);
+    end;
+  end;
+end;
+
 procedure InitializeWizard();
 begin
   // Customizações da janela de instalação podem ser adicionadas aqui
@@ -88,6 +149,9 @@ var
   ResultCode: Integer;
 begin
   Result := True;
+  
+  // Verificar dependências do sistema
+  InstallVCRedist();
   
   // Verificar se existe uma instalação antiga com desinstalador corrompido
   if RegQueryStringValue(HKEY_CURRENT_USER, 
