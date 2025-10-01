@@ -1669,32 +1669,31 @@ class MainWindow(QMainWindow):
         te.setPlainText(text)
         te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
         layout.addWidget(te)
-        
+
         # Botões
         from PyQt5.QtWidgets import QHBoxLayout
         btn_layout = QHBoxLayout()
-        
+
         github_btn = QPushButton("🌐 GitHub")
         github_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/Fabianob19/SwitchPilot")))
         btn_layout.addWidget(github_btn)
-        
+
         discord_btn = QPushButton("💬 Discord")
         discord_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://discord.gg/2MKdsQpMFt")))
         btn_layout.addWidget(discord_btn)
-        
+
         copy_btn = QPushButton("📋 Copiar Informações")
         copy_btn.clicked.connect(lambda: QApplication.clipboard().setText(text))
         btn_layout.addWidget(copy_btn)
-        
+
         close_btn = QPushButton("Fechar")
         close_btn.clicked.connect(dlg.close)
         btn_layout.addWidget(close_btn)
-        
+
         layout.addLayout(btn_layout)
-        
+
         dlg.resize(850, 750)
         dlg.exec_()
-
 
     def keyPressEvent(self, event):
         """Tratamento de atalhos de teclado globais"""
@@ -1709,7 +1708,7 @@ class MainWindow(QMainWindow):
                     self.monitoring_control_widget._handle_stop_monitoring()
             event.accept()
             return
-        
+
         # Deixa o evento seguir para processamento normal
         super().keyPressEvent(event)
 
