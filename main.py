@@ -1,6 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QSharedMemory
 from switchpilot.ui.main_window import MainWindow  # Nova MainWindow
 from switchpilot.core.main_controller import MainController  # Importar MainController
 import subprocess
@@ -52,6 +53,36 @@ if __name__ == "__main__":
         app.setWindowIcon(QIcon("ICONE.ico"))
     except Exception:
         pass
+
+    # Verificação de instância única
+    shared_memory = QSharedMemory("SwitchPilot_SingleInstance")
+    
+    # Tentar criar memória compartilhada
+    if not shared_memory.create(1):
+        # Se já existe, significa que outra instância está rodando
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("SwitchPilot - Já está rodando")
+        msg.setText("⚠️ O SwitchPilot já está em execução!")
+        msg.setInformativeText(
+            "Uma instância do SwitchPilot já está rodando.\n\n"
+            "Verifique a bandeja do sistema (ao lado do relógio) "
+            "para restaurar a janela.\n\n"
+            "Deseja fechar esta segunda instância?"
+        )
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.Yes)
+        
+        yes_button = msg.button(QMessageBox.Yes)
+        yes_button.setText("Sim, Fechar")
+        no_button = msg.button(QMessageBox.No)
+        no_button.setText("Não, Continuar Mesmo Assim")
+        
+        result = msg.exec_()
+        
+        if result == QMessageBox.Yes:
+            sys.exit(0)
+        # Se escolher "Não", continua normalmente (permite múltiplas instâncias para debug)
 
     version = "v1.5.1"  # Otimizações de detecção NCC
     main_win = MainWindow(version=version)
