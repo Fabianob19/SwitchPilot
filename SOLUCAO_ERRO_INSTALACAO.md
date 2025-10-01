@@ -5,7 +5,10 @@
 ### **Erro 1: "Incapaz de executar o arquivo unins000.exe"**
 Este erro aparece quando você tenta instalar uma nova versão do SwitchPilot, mas o Windows ainda tem registros de uma instalação antiga cujo desinstalador foi deletado ou corrompido.
 
-### **Erro 2: "Código 225 - Não possui o software adequado"**
+### **Erro 2: "Código 225 - Arquivo contém vírus ou software indesejado"**
+Este erro indica que o **antivírus/Windows Defender está bloqueando** o SwitchPilot (falso positivo).
+
+### **Erro 3: "Código 225 - Não possui o software adequado"**
 Este erro indica que faltam dependências do sistema Windows (Visual C++ Redistributable).
 
 ---
@@ -45,7 +48,58 @@ Delete os atalhos antigos:
 
 ---
 
-## ✅ **SOLUÇÃO PARA ERRO "CÓDIGO 225" (FALTAM DEPENDÊNCIAS):**
+## ✅ **SOLUÇÃO PARA ERRO "CÓDIGO 225 - ANTIVÍRUS BLOQUEANDO":**
+
+### **Causa:**
+O Windows Defender ou antivírus está bloqueando o SwitchPilot.exe como falso positivo.
+
+### **⚠️ POR QUE ISSO ACONTECE?**
+Executáveis criados com PyInstaller são frequentemente marcados como "suspeitos" por antivírus devido à forma como empacotam o código Python. **Isso é um FALSO POSITIVO** - o SwitchPilot é 100% seguro e open-source!
+
+### **Solução 1: Adicionar Exceção no Windows Defender (RECOMENDADO)**
+
+1. **Abra o Windows Security:**
+   - Pressione `Win + I` (Configurações)
+   - Vá em **"Privacidade e Segurança"** > **"Segurança do Windows"**
+   - Clique em **"Proteção contra vírus e ameaças"**
+
+2. **Adicione uma exclusão:**
+   - Role para baixo e clique em **"Gerenciar configurações"**
+   - Role até **"Exclusões"**
+   - Clique em **"Adicionar ou remover exclusões"**
+   - Clique em **"Adicionar uma exclusão"** > **"Pasta"**
+   - Selecione a pasta:
+     ```
+     C:\Users\[SEU_NOME]\AppData\Local\Programs\SwitchPilot
+     ```
+   - Ou navegue para onde você instalou o programa
+
+3. **Execute o programa:**
+   - Após adicionar a exclusão, execute o instalador novamente
+   - Ou execute o `SwitchPilot.exe` diretamente da pasta
+
+### **Solução 2: Desativar Temporariamente o Windows Defender**
+
+1. Abra **Windows Security**
+2. Vá em **"Proteção contra vírus e ameaças"**
+3. Clique em **"Gerenciar configurações"**
+4. Desative **"Proteção em tempo real"** (temporariamente)
+5. Execute o instalador
+6. **Reative** a proteção depois
+
+### **Solução 3: Se usar outro antivírus (Avast, AVG, etc.)**
+
+1. Abra seu antivírus
+2. Procure por **"Exceções"** ou **"Lista de Permissões"**
+3. Adicione a pasta do SwitchPilot
+4. Tente novamente
+
+### **💡 DICA:**
+A partir da versão 1.5.1+, o instalador **NÃO executa automaticamente** o programa ao final, evitando esse bloqueio. Você pode executar manualmente depois de adicionar a exceção!
+
+---
+
+## ✅ **SOLUÇÃO PARA ERRO "CÓDIGO 225 - FALTAM DEPENDÊNCIAS":**
 
 ### **Causa:**
 Falta o Microsoft Visual C++ Redistributable 2015-2022 (x64)
