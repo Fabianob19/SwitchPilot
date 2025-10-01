@@ -83,7 +83,38 @@ begin
 end;
 
 function InitializeSetup(): Boolean;
+var
+  OldUninstallPath: String;
+  ResultCode: Integer;
 begin
   Result := True;
-  // Verificações antes da instalação podem ser adicionadas aqui
+  
+  // Verificar se existe uma instalação antiga com desinstalador corrompido
+  if RegQueryStringValue(HKEY_CURRENT_USER, 
+    'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A5B8C3D4-E6F7-4A8B-9C0D-1E2F3A4B5C6D}_is1',
+    'UninstallString', OldUninstallPath) then
+  begin
+    // Se o desinstalador não existe mais, limpar o registro
+    if not FileExists(OldUninstallPath) then
+    begin
+      RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 
+        'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A5B8C3D4-E6F7-4A8B-9C0D-1E2F3A4B5C6D}_is1');
+      
+      // Informar o usuário
+      MsgBox('Detectada instalação antiga corrompida. ' +
+             'A instalação será limpa automaticamente.', 
+             mbInformation, MB_OK);
+    end
+    else
+    begin
+      // Se o desinstalador existe, perguntar se quer desinstalar
+      if MsgBox('Uma versão anterior do SwitchPilot foi detectada. ' +
+                'Deseja desinstalá-la antes de continuar?' + #13#10#13#10 +
+                'Recomendado: Sim', 
+                mbConfirmation, MB_YESNO) = IDYES then
+      begin
+        Exec(OldUninstallPath, '/SILENT', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+      end;
+    end;
+  end;
 end;
