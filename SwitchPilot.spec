@@ -25,7 +25,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,  # Desativar UPX reduz falsos positivos
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -33,13 +33,15 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['ICONE.ico'],
+    version='version_info.txt',  # Adicionar informações de versão
+    manifest='switchpilot.manifest',  # Adicionar manifest do Windows
 )
 coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,  # Desativar UPX reduz falsos positivos
     upx_exclude=[],
     name='SwitchPilot',
 )
