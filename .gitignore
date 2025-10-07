@@ -20,7 +20,7 @@ venv.bak/
 build/
 dist/
 *.spec.backup
-*.manifest
+switchpilot.manifest
 *.exe.manifest
 
 # === Arquivos Binários ===
@@ -37,6 +37,7 @@ dist/
 *.7z
 release_*/
 releases/
+installer_output/
 
 # === Logs e Temporários ===
 *.log
@@ -73,4 +74,10 @@ switchpilot/references/ref_*.png
 # === Sistema Operacional ===
 Thumbs.db
 Desktop.ini
-.DS_Store 
+.DS_Store
+
+# === Scripts e Documentação Interna ===
+criar_instalador_simples.ps1
+INSTRUCOES_UPLOAD_RELEASE.txt
+COMO_CRIAR_INSTALADOR.md
+tools/publish_github.ps1 
