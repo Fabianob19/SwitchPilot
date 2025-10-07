@@ -173,6 +173,7 @@ class MainController(QObject):
             references_data=self.references,
             pgm_details=self.pgm_details,
             action_executor_callback=self._execute_actions_from_thread,
+            action_description_callback=self.get_action_description,  # Callback para descrever ações
             initial_static_threshold=self.current_static_threshold,        # Passando o limiar
             initial_sequence_threshold=self.current_sequence_threshold,   # Passando o limiar
             initial_monitor_interval=self.current_monitor_interval      # Novo: passando intervalo

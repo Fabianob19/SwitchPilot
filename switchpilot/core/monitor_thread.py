@@ -16,6 +16,7 @@ class MonitorThread(QThread):
     # action_triggered_signal = pyqtSignal(dict, dict) # matched_reference_data, action_data
 
     def __init__(self, references_data, pgm_details, action_executor_callback,
+                 action_description_callback,
                  initial_static_threshold=0.90, initial_sequence_threshold=0.90, initial_monitor_interval=0.5, parent=None):
         super().__init__(parent)
         # Emitir log aqui para verificar o que foi recebido
@@ -27,6 +28,7 @@ class MonitorThread(QThread):
         self.references_data = list(references_data)  # Garantir que é uma cópia e uma lista
         self.pgm_details = pgm_details
         self.action_executor_callback = action_executor_callback  # Função do MainController para executar ações
+        self.action_description_callback = action_description_callback  # Função do MainController para descrever ações
 
         self.running = False
         self.monitor_interval = initial_monitor_interval  # Intervalo entre verificações em segundos (agora configurável)
@@ -88,69 +90,11 @@ class MonitorThread(QThread):
             print(f"[MonitorThread]: Tentativa de definir INTERVALO DE CAPTURA inválido: {interval}")
 
     def _get_action_description(self, action):
-        """Retorna uma descrição legível para a ação. Adaptado de ui/painel.py."""
-        action_type = action.get('action_type', 'desconhecido')
-        params = action.get('params', {})
-        integration = action.get('integration', '')
-
-        desc = f"{integration} - {action_type}"
-
-        if integration == "OBS Studio":
-            if action_type == 'Trocar Cena':
-                return f"{desc}: '{params.get('scene_name', 'N/A')}'"
-            elif action_type == 'Definir Visibilidade da Fonte':
-                return f"{desc}: Fonte '{params.get('item_name', 'N/A')}' em Cena '{params.get('scene_name_for_item', 'N/A')}' para {'Visível' if params.get('visible') == 'true' else 'Oculto'}"
-            elif action_type == 'Alternar Mudo (Fonte de Áudio)':
-                return f"{desc}: Fonte de áudio '{params.get('input_name', 'N/A')}'"
-            # Adicionar outras descrições OBS conforme necessário
-
-        elif integration == "vMix":
-            if action_type == 'Function (Genérico)':
-                func_name = params.get('function_name', 'N/A')
-                inp = params.get('input')
-                val = params.get('value')
-                dur = params.get('duration')
-                parts = [f"Função: {func_name}"]
-                if inp:
-                    parts.append(f"Input: {inp}")
-                if val:
-                    parts.append(f"Valor: {val}")
-                if dur:
-                    parts.append(f"Duração: {dur}")
-                return f"{desc} ({', '.join(parts)})"
-            elif action_type == 'SetText':
-                return f"{desc}: Input '{params.get('input', 'N/A')}', Campo '{params.get('selected_name', 'N/A')}', Valor '{params.get('text_value', '')[:20]}...'"
-            elif action_type == 'Fade' or action_type == 'Cut':
-                inp = params.get('input')
-                dur = params.get('duration') if action_type == 'Fade' else None
-                parts = []
-                if inp:
-                    parts.append(f"Input: {inp}")
-                if dur:
-                    parts.append(f"Duração: {dur}ms")
-                return f"{desc} ({', '.join(parts) if parts else 'Preview/Program'})"
-            elif action_type == 'OverlayInputIn' or action_type == 'OverlayInputOut':
-                channel = params.get('overlay_channel', 'N/A')
-                inp = params.get('input') if action_type == 'OverlayInputIn' else None
-                parts = [f"Canal: {channel}"]
-                if inp:
-                    parts.append(f"Input: {inp}")
-                return f"{desc} ({', '.join(parts)})"
-            # Adicionar outras descrições vMix
-
-        # Para ações sem parâmetros detalhados ou tipos simples
-        simple_actions = ["Iniciar Gravação", "Parar Gravação", "Iniciar Streaming", "Parar Streaming",
-                          "StartRecording", "StopRecording"]
-        if action_type in simple_actions:
-            return desc  # A descrição já é o tipo de ação
-
-        # Fallback para outros casos
-        param_summary = []
-        for k, v in params.items():
-            param_summary.append(f"{k}='{str(v)[:20]}'")  # Limitar tamanho do valor
-        if param_summary:
-            return f"{desc} ({', '.join(param_summary)})"
-        return desc
+        """Retorna uma descrição legível para a ação usando o callback do MainController."""
+        if self.action_description_callback:
+            return self.action_description_callback(action)
+        # Fallback caso o callback não esteja disponível
+        return f"{action.get('integration', 'N/A')} - {action.get('action_type', 'N/A')}"
 
     def _downscale_gray(self, gray_img, max_width=160):
         h, w = gray_img.shape[:2]
