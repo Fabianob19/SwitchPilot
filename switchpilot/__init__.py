@@ -1,6 +1,5 @@
 """
 SwitchPilot - Automação de corte de cenas para lives
-Versão: 1.5.2
 
 Módulo principal do SwitchPilot, contendo:
 - core: Controladores principais e thread de monitoramento
@@ -8,6 +7,19 @@ Módulo principal do SwitchPilot, contendo:
 - ui: Interface gráfica PyQt5
 """
 
-__version__ = "1.5.2"
+import os
+
+def _get_version():
+    """Lê a versão do arquivo VERSION na raiz do projeto"""
+    try:
+        # Caminho para o arquivo VERSION na raiz do projeto
+        version_file = os.path.join(os.path.dirname(__file__), '..', 'VERSION')
+        with open(version_file, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except (FileNotFoundError, IOError):
+        # Fallback se o arquivo não existir
+        return "1.5.2"
+
+__version__ = _get_version()
 __author__ = "Fabianob19"
 __license__ = "MIT"
