@@ -41,6 +41,25 @@ except Exception:
 from .action_config_dialog import ActionConfigDialog  # Adicionada importação
 
 
+def get_user_references_dir():
+    """
+    Retorna o diretório de referências do usuário.
+    
+    Windows: %LOCALAPPDATA%\SwitchPilot\references
+    (~\AppData\Local\SwitchPilot\references)
+    
+    Esta pasta NÃO vai para o instalador, cada usuário tem suas próprias referências.
+    """
+    if os.name == 'nt':  # Windows
+        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~\\AppData\\Local'))
+        user_dir = os.path.join(appdata, 'SwitchPilot', 'references')
+    else:  # Linux/Mac (futuro)
+        user_dir = os.path.expanduser('~/.config/SwitchPilot/references')
+    
+    os.makedirs(user_dir, exist_ok=True)
+    return user_dir
+
+
 def safe_print(message):
     """Imprime sem quebrar o app quando o console não suporta caracteres.
 
@@ -67,13 +86,19 @@ class ReferenceManagerWidget(QWidget):
         super().__init__(parent)
         self.main_controller = main_controller  # <--- Armazenar main_controller
         self.selected_pgm_details = None  # (type: 'monitor'/'window', id: monitor_idx/window_obj, roi: (x,y,w,h))
-        self.references_data = []  # Lista para armazenar dados das referências {'name': str, 'path': str, 'actions': []}
+        # NOVO: Estrutura de dados modificada para manter imagens em memória
+        # {'name': str, 'type': 'static'/'sequence', 'image_data': np.array, 'actions': []}
+        # 'image_data' pode ser:
+        #   - Para 'static': np.array (imagem única)
+        #   - Para 'sequence': list[np.array] (lista de frames)
+        # 'path': só existe se foi salvo em disco
+        self.references_data = []
         self._setup_ui()
         self._ensure_references_dir()
 
     def _ensure_references_dir(self):
-        self.references_dir = os.path.join("switchpilot", "references")
-        os.makedirs(self.references_dir, exist_ok=True)
+        """Garante que o diretório de referências do usuário existe."""
+        self.references_dir = get_user_references_dir()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -519,44 +544,43 @@ class ReferenceManagerWidget(QWidget):
 
                         if ok and text:
                             # Sanitizar o nome do arquivo
-                            # Permitir pontos para extensões futuras, mas vamos adicionar .png
                             base_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', text.strip())
-                            if not base_filename:  # Se o nome se tornar vazio após sanitização
-                                base_filename = suggested_base_name  # Usar o padrão
+                            if not base_filename:
+                                base_filename = suggested_base_name
 
-                            # Adicionar extensão .png se não estiver lá (ou forçar para consistência)
+                            # Remover extensão .png se o usuário digitou
                             if base_filename.lower().endswith('.png'):
                                 base_filename = base_filename[:-4]
 
-                            # Lógica para evitar sobrescrever (nome_01.png, nome_02.png)
-                            final_filename = f"{base_filename}.png"
-                            filepath = os.path.join(self.references_dir, final_filename)
+                            # Garantir nome único na lista (não no disco!)
+                            final_filename = base_filename
                             count = 1
-                            while os.path.exists(filepath):
-                                final_filename = f"{base_filename}_{count:02d}.png"
-                                filepath = os.path.join(self.references_dir, final_filename)
+                            existing_names = [ref['name'] for ref in self.references_data]
+                            while final_filename in existing_names:
+                                final_filename = f"{base_filename}_{count:02d}"
                                 count += 1
 
-                            if cv2.imwrite(filepath, first_ref_image):
-                                new_ref_data = {'name': final_filename, 'type': 'static', 'path': filepath, 'actions': []}
-                                self.references_data.append(new_ref_data)
+                            # NOVO: Manter referência em MEMÓRIA (não salvar em disco automaticamente)
+                            new_ref_data = {
+                                'name': final_filename,
+                                'type': 'static',
+                                'image_data': first_ref_image.copy(),  # numpy array em memória
+                                'actions': []
+                                # 'path' NÃO existe até salvar explicitamente
+                            }
+                            self.references_data.append(new_ref_data)
 
-                                self._display_reference_in_list(new_ref_data)
-                                self.reference_list_widget.setCurrentRow(
-                                    self.reference_list_widget.count() - 1
-                                )
-                                self.references_updated.emit(self.get_all_references_data())  # Usar getter
-                                QMessageBox.information(
-                                    self,
-                                    "Referência Salva",
-                                    f"Referência '{final_filename}' salva com sucesso.",
-                                )
-                            else:
-                                QMessageBox.critical(
-                                    self,
-                                    "Erro ao Salvar",
-                                    f"Não foi possível salvar a imagem de referência em {filepath}",
-                                )
+                            self._display_reference_in_list(new_ref_data)
+                            self.reference_list_widget.setCurrentRow(
+                                self.reference_list_widget.count() - 1
+                            )
+                            self.references_updated.emit(self.get_all_references_data())
+                            QMessageBox.information(
+                                self,
+                                "Referência Criada",
+                                f"Referência '{final_filename}' criada em memória.\n\n"
+                                f"💡 Dica: Use 'Arquivo > Salvar Configuração' para persistir no disco."
+                            )
                         elif ok and not text:  # Usuário clicou OK mas deixou o nome vazio
                             QMessageBox.warning(
                                 self,
@@ -1368,6 +1392,114 @@ class ReferenceManagerWidget(QWidget):
 
     def get_all_references_data(self):
         return list(self.references_data)
+    
+    def save_references_to_disk(self):
+        """
+        Salva todas as referências em memória para o disco (pasta do usuário).
+        Retorna número de referências salvas.
+        """
+        saved_count = 0
+        try:
+            for ref in self.references_data:
+                if ref.get('type') == 'static' and 'image_data' in ref:
+                    # Salvar imagem estática
+                    filename = f"{ref['name']}.png"
+                    filepath = os.path.join(self.references_dir, filename)
+                    
+                    if cv2.imwrite(filepath, ref['image_data']):
+                        ref['path'] = filepath  # Adicionar path à referência
+                        saved_count += 1
+                    else:
+                        print(f"Erro ao salvar referência: {filename}")
+                        
+                elif ref.get('type') == 'sequence' and 'image_data' in ref:
+                    # Salvar sequência de frames
+                    seq_dir = os.path.join(self.references_dir, ref['name'])
+                    os.makedirs(seq_dir, exist_ok=True)
+                    
+                    frame_paths = []
+                    for i, frame in enumerate(ref['image_data']):
+                        frame_path = os.path.join(seq_dir, f"frame_{i:03d}.png")
+                        if cv2.imwrite(frame_path, frame):
+                            frame_paths.append(frame_path)
+                        else:
+                            print(f"Erro ao salvar frame {i} da sequência: {ref['name']}")
+                    
+                    if frame_paths:
+                        ref['frame_paths'] = frame_paths
+                        saved_count += 1
+                        
+            print(f"✅ {saved_count} referência(s) salva(s) em: {self.references_dir}")
+            return saved_count
+        except Exception as e:
+            print(f"Erro ao salvar referências: {e}")
+            return saved_count
+    
+    def load_references_from_disk(self):
+        """
+        Carrega referências salvas em disco para memória.
+        Retorna número de referências carregadas.
+        """
+        loaded_count = 0
+        try:
+            # Carregar imagens estáticas (.png na raiz)
+            for filename in os.listdir(self.references_dir):
+                if filename.endswith('.png'):
+                    filepath = os.path.join(self.references_dir, filename)
+                    if os.path.isfile(filepath):
+                        img = cv2.imread(filepath)
+                        if img is not None:
+                            ref_name = filename[:-4]  # Remover .png
+                            # Verificar se já existe
+                            if not any(r['name'] == ref_name for r in self.references_data):
+                                new_ref = {
+                                    'name': ref_name,
+                                    'type': 'static',
+                                    'image_data': img,
+                                    'path': filepath,
+                                    'actions': []
+                                }
+                                self.references_data.append(new_ref)
+                                self._display_reference_in_list(new_ref)
+                                loaded_count += 1
+            
+            # Carregar sequências (subpastas com frames)
+            for item in os.listdir(self.references_dir):
+                item_path = os.path.join(self.references_dir, item)
+                if os.path.isdir(item_path):
+                    # É uma pasta - pode ser uma sequência
+                    frames = []
+                    frame_paths = []
+                    for frame_file in sorted(os.listdir(item_path)):
+                        if frame_file.endswith('.png'):
+                            frame_path = os.path.join(item_path, frame_file)
+                            frame = cv2.imread(frame_path)
+                            if frame is not None:
+                                frames.append(frame)
+                                frame_paths.append(frame_path)
+                    
+                    if frames:
+                        # Verificar se já existe
+                        if not any(r['name'] == item for r in self.references_data):
+                            new_ref = {
+                                'name': item,
+                                'type': 'sequence',
+                                'image_data': frames,
+                                'frame_paths': frame_paths,
+                                'actions': []
+                            }
+                            self.references_data.append(new_ref)
+                            self._display_reference_in_list(new_ref)
+                            loaded_count += 1
+            
+            if loaded_count > 0:
+                self.references_updated.emit(self.get_all_references_data())
+                print(f"✅ {loaded_count} referência(s) carregada(s) de: {self.references_dir}")
+            
+            return loaded_count
+        except Exception as e:
+            print(f"Erro ao carregar referências: {e}")
+            return loaded_count
 
     def _handle_add_video_gif_sequence(self):
         video_filters = "Vídeos e GIFs (*.mp4 *.avi *.mov *.gif);;Todos os Arquivos (*)"

@@ -217,21 +217,47 @@ class MonitorThread(QThread):
         self.log_signal.emit(f"Preparando {len(self.references_data)} referências para monitoramento...", "debug")
         for ref in self.references_data:
             if ref.get('type') == 'static':
-                img = cv2.imread(ref['path'], cv2.IMREAD_GRAYSCALE)
+                # NOVO: Suporta tanto 'image_data' (memória) quanto 'path' (disco)
+                img = None
+                if 'image_data' in ref and ref['image_data'] is not None:
+                    # Imagem em memória (numpy array)
+                    img = ref['image_data']
+                    if len(img.shape) == 3:  # Se for colorida, converter para grayscale
+                        img = cv2.cvtColor(img, cv2.IMREAD_GRAYSCALE)
+                    self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada da memória.", "debug")
+                elif 'path' in ref:
+                    # Imagem em disco (backward compatibility)
+                    img = cv2.imread(ref['path'], cv2.IMREAD_GRAYSCALE)
+                    if img is not None:
+                        self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada do disco.", "debug")
+                    else:
+                        self.log_signal.emit(f"Falha ao carregar imagem de referência: {ref['path']}", "error")
+                
                 if img is not None:
                     prepared_references.append({'type': 'static', 'name': ref.get('name', ''), 'img': img, 'actions': ref.get('actions', [])})
-                    self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada.", "debug")
-                else:
-                    self.log_signal.emit(f"Falha ao carregar imagem de referência: {ref['path']}", "error")
             elif ref.get('type') == 'sequence':
                 frames = []
-                for fp in ref.get('frame_paths', []):
-                    img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
-                    if img is not None:
-                        frames.append(img)
+                # NOVO: Suporta tanto 'image_data' (lista de arrays) quanto 'frame_paths' (lista de paths)
+                if 'image_data' in ref and ref['image_data'] is not None:
+                    # Frames em memória
+                    for frame in ref['image_data']:
+                        if frame is not None:
+                            if len(frame.shape) == 3:
+                                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                            frames.append(frame)
+                    if frames:
+                        self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada da memória com {len(frames)} frames.", "debug")
+                elif 'frame_paths' in ref:
+                    # Frames em disco (backward compatibility)
+                    for fp in ref.get('frame_paths', []):
+                        img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
+                        if img is not None:
+                            frames.append(img)
+                    if frames:
+                        self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada do disco com {len(frames)} frames.", "debug")
+                
                 if frames:
                     prepared_references.append({'type': 'sequence', 'name': ref.get('name', ''), 'frames': frames, 'actions': ref.get('actions', [])})
-                    self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada com {len(frames)} frames.", "debug")
                     max_sequence_len = max(max_sequence_len, len(frames))
                 else:
                     self.log_signal.emit(f"Falha ao carregar frames da sequência: {ref.get('name', '')}", "error")

@@ -68,8 +68,11 @@ htmlcov/
 *.cover
 .hypothesis/
 
-# === Arquivos de Referência de Teste ===
-switchpilot/references/ref_*.png
+# === Arquivos de Referência ===
+# IMPORTANTE: Referências de usuário não devem ir para o Git/Instalador
+# Agora salvamos em %LOCALAPPDATA%\SwitchPilot\references\
+switchpilot/references/
+!switchpilot/references/.gitkeep
 
 # === Sistema Operacional ===
 Thumbs.db
