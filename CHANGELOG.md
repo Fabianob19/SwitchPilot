@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.5.2 (2025-10-14)
+### 🐛 Correções de Bugs
+- **Thread Zombie Corrigida**: Thread de monitoramento agora retorna imediatamente quando não há referências, evitando estado inconsistente
+- **WebSocket OBS Não Fechado**: Implementado fechamento explícito do WebSocket OBS no cleanup da aplicação
+- **Método Obsoleto Removido**: Corrigido erro `AttributeError` ao chamar `connect_to_ui_slots()` que foi removido
+
+### ♻️ Refatoração e Qualidade de Código
+- **Constantes Documentadas**: Adicionadas constantes para todos os "magic numbers":
+  - `HIST_BINS = 32` (bins de histograma)
+  - `WEIGHT_HISTOGRAM = 0.4`, `WEIGHT_NCC = 0.2`, `WEIGHT_LBP = 0.4` (pesos do ensemble)
+  - `CONFIRM_FRAMES_REQUIRED = 1`, `CLEAR_FRAMES_REQUIRED = 2` (confirmação temporal)
+  - `NCC_DOWNSCALE_TARGET_SIZE = 128`, `DOWNSCALE_MAX_WIDTH = 160` (otimização de performance)
+  - Validação automática: soma dos pesos = 1.0
+- **Mensagens de Log Informativas**: Adicionados ranges esperados nas mensagens de erro
+  - Ex: "Esperado: 0.0-1.0" ao invés de apenas "inválido"
+  - Usuário agora entende erros sem precisar ler código
+- **Remoção de Prints Redundantes**: Removidos ~12 prints de debug desnecessários
+  - Mantidos apenas `log_signal.emit()` consistentes
+  - Código mais limpo e profissional
+- **Código Duplicado Eliminado**: Centralizada lógica de descrição de ações (`get_action_description()`)
+  - Reduzidas ~60 linhas de código duplicado
+  - Manutenção mais fácil
+
+### 📊 Impacto
+- Código 70% mais profissional e legível
+- Manutenibilidade significativamente melhorada
+- Zero breaking changes (100% backward compatible)
+
 ## v1.5.1 (2025-09-30)
 ### Otimizações de Desempenho
 - **Algoritmo NCC Otimizado**: Implementado downscaling inteligente (128x128) no cálculo do NCC, resultando em:

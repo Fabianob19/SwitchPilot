@@ -1,6 +1,6 @@
 """
 SwitchPilot - Automação de corte de cenas para lives
-Versão: 1.5.1
+Versão: 1.5.2
 
 Módulo principal do SwitchPilot, contendo:
 - core: Controladores principais e thread de monitoramento
@@ -8,6 +8,6 @@ Módulo principal do SwitchPilot, contendo:
 - ui: Interface gráfica PyQt5
 """
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __author__ = "Fabianob19"
 __license__ = "MIT"

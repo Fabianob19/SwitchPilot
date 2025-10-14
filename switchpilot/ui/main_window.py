@@ -916,7 +916,7 @@ class MainWindow(QMainWindow):
             "🎯 ESTATÍSTICAS DO SISTEMA\n\n"
             "• Precisão de Detecção: ~95%\n"
             "• Velocidade de Processamento: ~0.54s por ciclo\n"
-            "• Métricas Otimizadas (v1.5.1):\n"
+            "• Métricas Otimizadas (v1.5.2):\n"
             "  - Histograma: 82% de precisão (peso 40%)\n"
             "  - NCC: 82% de precisão (peso 20%)\n"
             "  - LBP: 81% de precisão (peso 40%)\n\n"
@@ -1462,7 +1462,7 @@ class MainWindow(QMainWindow):
         import requests
         from PyQt5.QtWidgets import QHBoxLayout
 
-        current_version = self._version or "v1.5.1"
+        current_version = self._version or "v1.5.2"
 
         try:
             # Buscar última versão no GitHub
@@ -1568,7 +1568,7 @@ class MainWindow(QMainWindow):
 
     def _show_about(self):
         """Sobre o SwitchPilot com agradecimentos"""
-        version = self._version or "v1.5.1"
+        version = self._version or "v1.5.2"
 
         text = (
             "═══════════════════════════════════════════════════════════════════\n"
