@@ -84,7 +84,8 @@ if __name__ == "__main__":
             sys.exit(0)
         # Se escolher "Não", continua normalmente (permite múltiplas instâncias para debug)
 
-    version = "v1.5.1"  # Otimizações de detecção NCC
+    from switchpilot import __version__
+    version = f"v{__version__}"
     main_win = MainWindow(version=version)
     main_win.show()
 
