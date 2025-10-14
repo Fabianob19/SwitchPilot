@@ -1480,9 +1480,15 @@ class MainWindow(QMainWindow):
                 published_at = data.get('published_at', '')
 
                 # Comparar versões
-                if latest_version.replace('v', '') > current_version.replace('v', ''):
+                current_ver = current_version.replace('v', '')
+                latest_ver = latest_version.replace('v', '')
+                
+                if latest_ver > current_ver:
                     update_status = "🎉 NOVA VERSÃO DISPONÍVEL!"
                     update_msg = f"Versão {latest_version} está disponível para download!"
+                elif latest_ver < current_ver:
+                    update_status = "🚀 VERSÃO DE DESENVOLVIMENTO!"
+                    update_msg = f"Você está usando v{current_ver} (mais recente que a última release pública v{latest_version})."
                 else:
                     update_status = "✅ VOCÊ ESTÁ ATUALIZADO!"
                     update_msg = "Você está usando a versão mais recente."
