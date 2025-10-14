@@ -5,8 +5,37 @@ import numpy as np
 import time
 import os  # Adicionado para os.path.basename em logs futuros
 
-# Será necessário adicionar a lógica de descrever_acao aqui ou no MainController
-# Por enquanto, vamos focar na estrutura da thread.
+
+# ============================================================================
+# CONSTANTES DE CONFIGURAÇÃO - DETECTOR DE SIMILARIDADE
+# ============================================================================
+# Estas constantes foram otimizadas na versão 1.5.1 através de testes
+# empíricos. Os pesos do ensemble foram ajustados para maximizar a
+# precisão de detecção (~95% score final).
+
+# Configuração de Histograma
+HIST_BINS = 32  # Bins de histograma (balanceamento performance/precisão)
+HIST_RANGES = [0, 256]  # Range de valores de pixel (grayscale)
+HIST_CHANNELS = [0]  # Canal único (imagem grayscale)
+
+# Pesos do Ensemble Detector (Histogram + NCC + LBP)
+WEIGHT_HISTOGRAM = 0.4  # 40% - Histograma (Precisão: ~99%)
+WEIGHT_NCC = 0.2        # 20% - Normalized Cross-Correlation (Precisão: ~82%)
+WEIGHT_LBP = 0.4        # 40% - Local Binary Pattern (Precisão: ~97%)
+
+# Validação: soma dos pesos deve ser 1.0
+assert abs((WEIGHT_HISTOGRAM + WEIGHT_NCC + WEIGHT_LBP) - 1.0) < 0.001, \
+    "Soma dos pesos do ensemble deve ser 1.0"
+
+# Configuração de Confirmação Temporal
+CONFIRM_FRAMES_REQUIRED = 1  # K - Frames consecutivos para confirmar match
+CLEAR_FRAMES_REQUIRED = 2    # M - Frames consecutivos para limpar estado
+
+# Configuração de Performance
+NCC_DOWNSCALE_TARGET_SIZE = 128  # Tamanho alvo para downscale no NCC (otimização)
+DOWNSCALE_MAX_WIDTH = 160        # Largura máxima para downscale geral
+
+# ============================================================================
 
 
 class MonitorThread(QThread):
@@ -19,11 +48,6 @@ class MonitorThread(QThread):
                  action_description_callback,
                  initial_static_threshold=0.90, initial_sequence_threshold=0.90, initial_monitor_interval=0.5, parent=None):
         super().__init__(parent)
-        # Emitir log aqui para verificar o que foi recebido
-        # Temporariamente, vamos usar print direto caso log_signal não esteja pronto ou haja problema com QObject em __init__ antes de mover para a thread certa
-        print(f"[MonitorThread __init__] Recebido references_data: {references_data}")
-        # Se quiser usar log_signal, precisaria de um jeito de emiti-lo de forma segura aqui ou logo no início do run.
-        # Para simplificar o debug imediato, print pode ser mais direto.
 
         self.references_data = list(references_data)  # Garantir que é uma cópia e uma lista
         self.pgm_details = pgm_details
@@ -37,57 +61,42 @@ class MonitorThread(QThread):
         self.similarity_threshold_static = initial_static_threshold
         self.similarity_threshold_sequence_frame = initial_sequence_threshold
 
-        # Para comparação por histograma (se usada)
-        self.hist_size = [32]  # reduzido para performance
-        self.hist_ranges = [0, 256]
-        self.hist_channels = [0]
+        # Configuração de Histograma (usando constantes)
+        self.hist_size = [HIST_BINS]
+        self.hist_ranges = HIST_RANGES
+        self.hist_channels = HIST_CHANNELS
 
-        # Pesos do ensemble (Hist + NCC + LBP) - Otimizado v1.5.1
-        # Ajustado: mais peso em Hist e LBP que performam melhor
-        # Resultado: Score final subiu de 0.846 para 0.943-0.956 (~95%)
-        self.weight_hist = 0.4  # 40% - Histograma (otimizado de 0.2) - Precisão: ~99%
-        self.weight_ncc = 0.2   # 20% - NCC (otimizado de 0.5) - Precisão: ~82%
-        self.weight_lbp = 0.4   # 40% - LBP (otimizado de 0.3) - Precisão: ~97%
-        # Confirmação temporal
-        self.confirm_frames_required = 1  # K
-        self.clear_frames_required = 2    # M
+        # Pesos do ensemble (usando constantes documentadas)
+        self.weight_hist = WEIGHT_HISTOGRAM
+        self.weight_ncc = WEIGHT_NCC
+        self.weight_lbp = WEIGHT_LBP
+
+        # Confirmação temporal (usando constantes)
+        self.confirm_frames_required = CONFIRM_FRAMES_REQUIRED
+        self.clear_frames_required = CLEAR_FRAMES_REQUIRED
         self._consec_match = 0
         self._consec_nonmatch = 0
-
-        # Adicionar log após copiar para self.references_data
-        print(f"[MonitorThread __init__] self.references_data inicializado com: {self.references_data}")
-        print(f"[MonitorThread __init__] Limiar Estático Inicial: {self.similarity_threshold_static}")  # NOVO PRINT
-        print(f"[MonitorThread __init__] Limiar Sequência Inicial: {self.similarity_threshold_sequence_frame}")  # NOVO PRINT
 
     def set_static_threshold(self, threshold):
         if 0.0 <= threshold <= 1.0:
             self.similarity_threshold_static = threshold
             self.log_signal.emit(f"Limiar de similaridade ESTÁTICA atualizado para: {threshold:.2f}", "info")
-            print(f"[MonitorThread]: Limiar Estático atualizado para {threshold:.2f}")
         else:
             self.log_signal.emit(f"Tentativa de definir limiar ESTÁTICO inválido: {threshold}. Mantendo {self.similarity_threshold_static:.2f}.", "warning")
-            print(f"[MonitorThread]: Tentativa de definir limiar ESTÁTICO inválido: {threshold}")
 
     def set_sequence_threshold(self, threshold):
-        print(f"[DEBUG] MonitorThread.set_sequence_threshold chamado com {threshold}")
         if 0.0 <= threshold <= 1.0:
             self.similarity_threshold_sequence_frame = threshold
-            print(f"[DEBUG] MonitorThread: similarity_threshold_sequence_frame agora = {self.similarity_threshold_sequence_frame}")
             self.log_signal.emit(f"Limiar de similaridade de SEQUÊNCIA atualizado para: {threshold:.2f}", "info")
-            print(f"[MonitorThread]: Limiar Sequência atualizado para {threshold:.2f}")
         else:
             self.log_signal.emit(f"Tentativa de definir limiar de SEQUÊNCIA inválido: {threshold}. Mantendo {self.similarity_threshold_sequence_frame:.2f}.", "warning")
-            print(f"[MonitorThread]: Tentativa de definir limiar SEQUÊNCIA inválido: {threshold}")
 
     def set_monitor_interval(self, interval):
-        print(f"[DEBUG] MonitorThread.set_monitor_interval chamado com {interval}")
         if 0.1 <= interval <= 5.0:
             self.monitor_interval = interval
             self.log_signal.emit(f"Intervalo de captura atualizado para: {interval:.2f}s", "info")
-            print(f"[MonitorThread]: Intervalo de captura atualizado para {interval:.2f}s")
         else:
             self.log_signal.emit(f"Tentativa de definir INTERVALO DE CAPTURA inválido: {interval}. Mantendo {self.monitor_interval:.2f}s.", "warning")
-            print(f"[MonitorThread]: Tentativa de definir INTERVALO DE CAPTURA inválido: {interval}")
 
     def _get_action_description(self, action):
         """Retorna uma descrição legível para a ação usando o callback do MainController."""
@@ -96,7 +105,7 @@ class MonitorThread(QThread):
         # Fallback caso o callback não esteja disponível
         return f"{action.get('integration', 'N/A')} - {action.get('action_type', 'N/A')}"
 
-    def _downscale_gray(self, gray_img, max_width=160):
+    def _downscale_gray(self, gray_img, max_width=DOWNSCALE_MAX_WIDTH):
         h, w = gray_img.shape[:2]
         if w <= max_width:
             return gray_img
@@ -123,11 +132,10 @@ class MonitorThread(QThread):
         #     frame_gray = cv2.resize(frame_gray, (ref_gray.shape[1], ref_gray.shape[0]), interpolation=cv2.INTER_LINEAR)
         # res = cv2.matchTemplate(frame_gray, ref_gray, cv2.TM_CCOEFF_NORMED)
 
-        # Downscaling para tamanho fixo de 128x128 pixels
+        # Downscaling para tamanho fixo (otimização v1.5.1)
         # INTER_AREA: melhor qualidade para redução de imagens
-        target_size = 128
-        ref_small = cv2.resize(ref_gray, (target_size, target_size), interpolation=cv2.INTER_AREA)
-        frame_small = cv2.resize(frame_gray, (target_size, target_size), interpolation=cv2.INTER_AREA)
+        ref_small = cv2.resize(ref_gray, (NCC_DOWNSCALE_TARGET_SIZE, NCC_DOWNSCALE_TARGET_SIZE), interpolation=cv2.INTER_AREA)
+        frame_small = cv2.resize(frame_gray, (NCC_DOWNSCALE_TARGET_SIZE, NCC_DOWNSCALE_TARGET_SIZE), interpolation=cv2.INTER_AREA)
 
         # Template matching com imagens redimensionadas
         try:
@@ -194,8 +202,6 @@ class MonitorThread(QThread):
         return s
 
     def run(self):
-        print("[DIAG-PRINT] Entrou no método run() da MonitorThread.")
-        self.log_signal.emit("[DIAG] Entrou no método run() da MonitorThread.", "debug")
         self.running = True
         self.log_signal.emit("Thread de monitoramento iniciada.", "info")
         self.status_signal.emit("Monitoramento Ativo")

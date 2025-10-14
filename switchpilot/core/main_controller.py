@@ -238,20 +238,25 @@ class MainController(QObject):
                 self.monitor_thread_instance.set_static_threshold(threshold)
             self._log_internal(f"Limiar ESTÁTICO definido para: {self.current_static_threshold:.2f}", "info")
         else:
-            self._log_internal(f"Valor de limiar ESTÁTICO inválido: {threshold}. Mantendo {self.current_static_threshold:.2f}.", "warning")
+            self._log_internal(
+                f"Valor de limiar ESTÁTICO inválido: {threshold}. "
+                f"Esperado: 0.0-1.0. Mantendo {self.current_static_threshold:.2f}.",
+                "warning"
+            )
 
     def update_sequence_threshold(self, threshold):
-        print(f"[DEBUG] MainController.update_sequence_threshold chamado com {threshold}")
         self._log_internal(f"Solicitação para atualizar limiar SEQUÊNCIA para: {threshold:.2f}", "debug")
         if 0.0 <= threshold <= 1.0:
             self.current_sequence_threshold = threshold
-            print(f"[DEBUG] MainController: current_sequence_threshold agora = {self.current_sequence_threshold}")
             if self.monitor_thread_instance and self.monitor_thread_instance.isRunning():
-                print(f"[DEBUG] MainController: Chamando set_sequence_threshold na thread...")
                 self.monitor_thread_instance.set_sequence_threshold(threshold)
             self._log_internal(f"Limiar SEQUÊNCIA definido para: {self.current_sequence_threshold:.2f}", "info")
         else:
-            self._log_internal(f"Valor de limiar SEQUÊNCIA inválido: {threshold}. Mantendo {self.current_sequence_threshold:.2f}.", "warning")
+            self._log_internal(
+                f"Valor de limiar SEQUÊNCIA inválido: {threshold}. "
+                f"Esperado: 0.0-1.0. Mantendo {self.current_sequence_threshold:.2f}.",
+                "warning"
+            )
 
     def update_monitor_interval(self, interval):
         self._log_internal(f"Solicitação para atualizar INTERVALO DE CAPTURA para: {interval:.2f}s", "debug")
@@ -261,7 +266,11 @@ class MainController(QObject):
                 self.monitor_thread_instance.set_monitor_interval(interval)
             self._log_internal(f"Intervalo de captura definido para: {self.current_monitor_interval:.2f}s", "info")
         else:
-            self._log_internal(f"Valor de INTERVALO DE CAPTURA inválido: {interval}. Mantendo {self.current_monitor_interval:.2f}s.", "warning")
+            self._log_internal(
+                f"Valor de INTERVALO DE CAPTURA inválido: {interval}. "
+                f"Esperado: 0.1-5.0 segundos. Mantendo {self.current_monitor_interval:.2f}s.",
+                "warning"
+            )
 
     def stop_monitoring(self, reason="Solicitado pelo usuário."):
         if not self.monitoring_active:
