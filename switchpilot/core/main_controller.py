@@ -575,15 +575,17 @@ class MainController(QObject):
         if self.monitoring_active or (self.monitor_thread_instance and self.monitor_thread_instance.isRunning()):
             self.stop_monitoring("Aplicação encerrando.")
 
-        # if self.obs_controller: # A conexão é feita e desfeita por requisição no OBSController atual
-        #     # self.obs_controller.disconnect() # Não existe este método, e não é necessário
-        #     self._log_internal("OBS Controller - Nenhuma desconexão explícita necessária.", "debug")
+        # Fechar WebSocket do OBS se estiver aberto
+        if self.obs_controller and hasattr(self.obs_controller, 'ws'):
+            if self.obs_controller.ws:
+                try:
+                    self.obs_controller.ws.close()
+                    self._log_internal("OBS WebSocket fechado com sucesso.", "debug")
+                except Exception as e:
+                    self._log_internal(f"Erro ao fechar OBS WebSocket: {e}", "warning")
 
         # Adicionar cleanup para vMixController se necessário
         # if self.vmix_controller and hasattr(self.vmix_controller, 'close_connection'):
         #     self.vmix_controller.close_connection()
 
         self._log_internal("Cleanup do MainController concluído.", "info")
-
-    def connect_to_ui_slots(self):  # Método parece obsoleto dado _connect_ui_signals
-        pass

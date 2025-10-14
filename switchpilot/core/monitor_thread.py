@@ -202,7 +202,8 @@ class MonitorThread(QThread):
 
         if not self.references_data:
             self.log_signal.emit("Nenhuma referência carregada na thread. Parando.", "warning")
-            self.running = False
+            self.status_signal.emit("Monitoramento Parado")
+            return  # Sair imediatamente
 
         # Preparar referências (ex: carregar imagens estáticas, calcular histogramas)
         prepared_references = []
@@ -233,7 +234,8 @@ class MonitorThread(QThread):
 
         if not prepared_references:
             self.log_signal.emit("Nenhuma referência válida para monitoramento. Parando thread.", "error")
-            self.running = False
+            self.status_signal.emit("Monitoramento Parado")
+            return  # Sair imediatamente
 
         self.log_signal.emit(f"[DIAG] Antes do while self.running: running={self.running}", "debug")
 
