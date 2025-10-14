@@ -49,8 +49,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "Criar Ã­cone na Barra de Tarefas"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Arquivos principais (toda a pasta release_v1.5.1)
-Source: "release_v1.5.1\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Arquivos principais (toda a pasta release_v1.5.2)
+Source: "release_v1.5.2\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Ãcone do aplicativo (garantir que seja copiado)
 Source: "{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Arquivos de documentaÃ§Ã£o
