@@ -123,11 +123,8 @@ if __name__ == "__main__":
     # distribuí-la para widgets que precisam dela (ex: ReferenceManagerWidget para ActionConfigDialog)
     main_win.set_main_controller_for_widgets(main_controller)
 
-    # 3. Conectar sinais do Core aos slots da UI
-    # (Esta é uma forma de fazer isso. Outra seria o controller se conectar diretamente
-    #  aos widgets através da referência main_win, o que já está sendo feito para
-    #  sinais da UI para o Core dentro do __init__ do MainController)
-    main_controller.connect_to_ui_slots()  # Conecta sinais do core para a UI
+    # 3. Conectar sinais já está sendo feito dentro do __init__ do MainController
+    # através de _connect_ui_signals(), então não precisamos chamar nada aqui
 
     # 4. Conectar o sinal de aboutToQuit da aplicação ao método de cleanup do controller
     app.aboutToQuit.connect(main_controller.cleanup)
