@@ -83,4 +83,9 @@ Desktop.ini
 criar_instalador_simples.ps1
 INSTRUCOES_UPLOAD_RELEASE.txt
 COMO_CRIAR_INSTALADOR.md
-tools/publish_github.ps1 
+tools/publish_github.ps1
+
+# === Agent & Temp ===
+.agent/
+version_info.txt
+tools/scripts/

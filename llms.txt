@@ -1,0 +1,22 @@
+# SwitchPilot
+> Intelligent automation tool for live streaming (OBS/vMix) that monitors screen regions, detects scene changes using computer vision (Histogram + NCC + LBP), and executes automatic actions.
+
+## Core Files
+- [main.py]: Application entry point
+- [switchpilot/core/main_controller.py]: Central logic controller
+- [switchpilot/core/monitor_thread.py]: Computer vision & monitoring loop
+- [switchpilot/ui/main_window.py]: Main GUI implementation
+- [switchpilot/integrations/]: External control modules (OBS, vMix)
+- [docs/developer/]: Technical documentation
+
+## Key Concepts
+- **Reference Image**: A saved screenshot of a game/camera scene.
+- **ROI (Region of Interest)**: Specific screen area to monitor.
+- **Detection Algorithm**: Ensemble method using Histogram Correlation (40%), Normalized Cross-Correlation (20%), and Local Binary Patterns (40%).
+- **Actions**: Commands sent to OBS (WebSocket) or vMix (HTTP API) triggers upon detection.
+
+## Architecture
+- **Language**: Python 3.10+
+- **GUI Framework**: PyQt5
+- **CV Library**: OpenCV, NumPy
+- **Build System**: PyInstaller (Spec file included)
