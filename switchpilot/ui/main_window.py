@@ -14,6 +14,7 @@ from switchpilot.ui.widgets.vmix_config import VMixConfigWidget
 from switchpilot.ui.widgets.reference_manager import ReferenceManagerWidget
 from switchpilot.ui.widgets.monitoring_control_widget import MonitoringControlWidget
 from switchpilot.ui.widgets.threshold_config_dialog import ThresholdConfigDialog
+from switchpilot.ui.widgets.help_center import HelpCenterDialog
 from switchpilot.ui.themes import THEME_LIGHT, THEME_DARK_DEFAULT, THEME_VERY_DARK
 from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
 
@@ -415,17 +416,17 @@ class MainWindow(QMainWindow):
         # Itens de Ajuda - Reorganizado e expandido
         # Seção 1: Tutoriais e Guias
         tutorial_action = QAction("📖 Tutorial Completo", self)
-        tutorial_action.triggered.connect(self._show_tutorial)
+        tutorial_action.triggered.connect(lambda: self._open_help_center("tutorial"))
         tutorial_action.setShortcut("F1")
         help_menu.addAction(tutorial_action)
 
         quick_guide_action = QAction("🚀 Guia Rápido", self)
-        quick_guide_action.triggered.connect(self._show_quick_guide)
+        quick_guide_action.triggered.connect(lambda: self._open_help_center("quick_guide"))
         quick_guide_action.setShortcut("Shift+F1")
         help_menu.addAction(quick_guide_action)
 
         shortcuts_action = QAction("⌨️ Atalhos de Teclado", self)
-        shortcuts_action.triggered.connect(self._show_shortcuts)
+        shortcuts_action.triggered.connect(lambda: self._open_help_center("shortcuts"))
         shortcuts_action.setShortcut("F2")
         help_menu.addAction(shortcuts_action)
 
@@ -433,12 +434,12 @@ class MainWindow(QMainWindow):
 
         # Seção 2: Suporte
         faq_action = QAction("❓ FAQ - Perguntas Frequentes", self)
-        faq_action.triggered.connect(self._show_faq)
+        faq_action.triggered.connect(lambda: self._open_help_center("faq"))
         faq_action.setShortcut("F3")
         help_menu.addAction(faq_action)
 
         troubleshooting_action = QAction("🔧 Troubleshooting", self)
-        troubleshooting_action.triggered.connect(self._show_troubleshooting)
+        troubleshooting_action.triggered.connect(lambda: self._open_help_center("troubleshooting"))
         troubleshooting_action.setShortcut("F4")
         help_menu.addAction(troubleshooting_action)
 
@@ -463,7 +464,7 @@ class MainWindow(QMainWindow):
 
         # Seção 4: Informações do Sistema
         requirements_action = QAction("📋 Requisitos do Sistema", self)
-        requirements_action.triggered.connect(self._show_requirements)
+        requirements_action.triggered.connect(lambda: self._open_help_center("requirements"))
         help_menu.addAction(requirements_action)
 
         updates_action = QAction("🔄 Verificar Atualizações", self)
@@ -479,7 +480,7 @@ class MainWindow(QMainWindow):
 
         # Seção 5: Sobre
         about_action = QAction("ℹ️ Sobre o SwitchPilot", self)
-        about_action.triggered.connect(self._show_about)
+        about_action.triggered.connect(lambda: self._open_help_center("about"))
         about_action.setShortcut("Ctrl+I")
         help_menu.addAction(about_action)
 
@@ -837,173 +838,10 @@ class MainWindow(QMainWindow):
         dlg.resize(900, 700)
         dlg.exec_()
 
-    def _show_quick_guide(self):
-        text = (
-            "═══════════════════════════════════════════════════════════════════\n"
-            "                      SWITCHPILOT - GUIA RÁPIDO\n"
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "🎯 INÍCIO RÁPIDO (5 PASSOS)\n\n"
-            "1. Configure OBS/vMix nas abas laterais\n"
-            "   • OBS: Porta 4455, senha do WebSocket\n"
-            "   • vMix: Porta 8088, ative Web Controller\n\n"
-
-            "2. Vá em 'Gerenciador de Referências'\n"
-            "   • Clique 'Selecionar Região PGM'\n"
-            "   • Escolha Monitor ou Janela\n"
-            "   • Desenhe a área a monitorar\n\n"
-
-            "3. Adicione imagens de referência\n"
-            "   • Botão 'Adicionar Referência'\n"
-            "   • Escolha imagem clara da cena\n"
-            "   • Dê nome descritivo\n\n"
-
-            "4. Configure ações para cada referência\n"
-            "   • Duplo clique na referência\n"
-            "   • Escolha tipo (OBS Cena, vMix, etc)\n"
-            "   • Configure parâmetros\n\n"
-
-            "5. Clique 'Iniciar Monitoramento'\n"
-            "   • Sistema começa a detectar automaticamente\n"
-            "   • Acompanhe logs na janela principal\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "⚙️ COMO FUNCIONA A DETECÇÃO\n\n"
-            "• Captura em tempo real a região definida\n"
-            "• Compara com suas imagens de referência\n"
-            "• Calcula Score de Similaridade (S):\n"
-            "  - S = 40% Histograma + 20% NCC + 40% LBP\n"
-            "  - S varia de 0.0 (diferente) a 1.0 (idêntico)\n"
-            "• Quando S ≥ Limiar, executa a ação configurada\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "💡 DICAS RÁPIDAS DE USO\n\n"
-            "📈 Score Alto (>0.92):\n"
-            "   ✅ Detecção precisa e confiável\n"
-            "   ✅ Poucas chances de erro\n\n"
-
-            "📉 Score Baixo (<0.85):\n"
-            "   ⚠️ Ajuste a região de captura\n"
-            "   ⚠️ Use referência mais nítida\n"
-            "   ⚠️ Verifique iluminação da cena\n\n"
-
-            "🎚️ Ajuste de Limiar:\n"
-            "   • Limiar Alto (0.93-0.98):\n"
-            "     + Mais preciso\n"
-            "     - Menos sensível (pode não detectar)\n\n"
-            "   • Limiar Médio (0.88-0.92) [RECOMENDADO]:\n"
-            "     + Equilíbrio ideal\n"
-            "     + Funciona na maioria dos casos\n\n"
-            "   • Limiar Baixo (0.80-0.87):\n"
-            "     + Mais sensível\n"
-            "     - Menos preciso (pode detectar errado)\n\n"
-
-            "⚡ Performance:\n"
-            "   • Intervalo Pequeno (0.3s):\n"
-            "     + Resposta rápida\n"
-            "     - Maior uso de CPU\n\n"
-            "   • Intervalo Médio (0.5s) [RECOMENDADO]:\n"
-            "     + Equilíbrio ideal\n"
-            "     + CPU moderado\n\n"
-            "   • Intervalo Grande (1.0s):\n"
-            "     + Economiza CPU\n"
-            "     - Resposta mais lenta\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "🎯 ESTATÍSTICAS DO SISTEMA\n\n"
-            "• Precisão de Detecção: ~95%\n"
-            "• Velocidade de Processamento: ~0.54s por ciclo\n"
-            "• Métricas Otimizadas (v1.5.2):\n"
-            "  - Histograma: 82% de precisão (peso 40%)\n"
-            "  - NCC: 82% de precisão (peso 20%)\n"
-            "  - LBP: 81% de precisão (peso 40%)\n\n"
-
-            "═══════════════════════════════════════════════════════════════════\n"
-            "💡 Precisa de mais detalhes? Veja o Tutorial Completo no menu Ajuda!\n"
-            "═══════════════════════════════════════════════════════════════════"
-        )
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Guia Rápido")
-        dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        enable_dark_title_bar_for_window(dlg)
-        layout = QVBoxLayout(dlg)
-        te = QTextEdit(dlg)
-        te.setReadOnly(True)
-        te.setPlainText(text)
-        te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-        layout.addWidget(te)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
-        buttons.rejected.connect(dlg.reject)
-        layout.addWidget(buttons)
-        dlg.resize(900, 700)
+    def _open_help_center(self, initial_topic="tutorial"):
+        """Abre a Central de Ajuda Unificada."""
+        dlg = HelpCenterDialog(self, initial_topic=initial_topic)
         dlg.exec_()
-
-    def _show_shortcuts(self):
-        text = (
-            "═══════════════════════════════════════════════════════════════════\n"
-            "                  ATALHOS DE TECLADO - SWITCHPILOT\n"
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "📁 ARQUIVO\n"
-            "   Ctrl+O                Importar configurações\n"
-            "   Ctrl+S                Exportar configurações\n"
-            "   Ctrl+E                Abrir pasta do aplicativo\n"
-            "   Ctrl+Q                Sair do programa\n\n"
-
-            "👁️ VISUALIZAÇÃO\n"
-            "   Ctrl+1                Tema Very Dark (escuro)\n"
-            "   Ctrl+2                Tema Dark Steel (cinza)\n"
-            "   F11                   Mostrar/Ocultar área de captura\n"
-            "   Ctrl+R                Restaurar layout padrão\n\n"
-
-            "⚙️ CONFIGURAÇÃO\n"
-            "   Ctrl+T                Ajustar limiares de similaridade\n\n"
-
-            "❓ AJUDA\n"
-            "   F1                    Tutorial completo\n"
-            "   Shift+F1              Guia rápido\n"
-            "   F2                    Atalhos de teclado (esta janela)\n"
-            "   F3                    FAQ - Perguntas frequentes\n"
-            "   F4                    Troubleshooting\n"
-            "   Ctrl+H                Ver changelog\n"
-            "   Ctrl+I                Sobre o programa\n\n"
-
-            "🎯 MONITORAMENTO\n"
-            "   Space                 Iniciar/Pausar monitoramento\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "💡 DICAS DE ATALHOS\n\n"
-            "• Ctrl = Tecla Control\n"
-            "• Shift = Tecla Shift (seta para cima)\n"
-            "• Alt = Tecla Alt\n"
-            "• F1-F12 = Teclas de função no topo do teclado\n\n"
-
-            "• Atalhos podem variar conforme layout do teclado\n"
-            "• Space funciona apenas com foco na janela principal\n"
-            "• Use Alt para acessar o menu com teclado"
-        )
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Atalhos de Teclado")
-        dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        enable_dark_title_bar_for_window(dlg)
-        layout = QVBoxLayout(dlg)
-        te = QTextEdit(dlg)
-        te.setReadOnly(True)
-        te.setPlainText(text)
-        te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-        layout.addWidget(te)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
-        buttons.rejected.connect(dlg.reject)
-        layout.addWidget(buttons)
-        dlg.resize(800, 700)
-        dlg.exec_()
-
     def _show_changelog(self):
         path = resource_path('CHANGELOG.md') if os.path.exists('CHANGELOG.md') else None
         if not path:
@@ -1031,302 +869,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.warning(self, "Changelog", f"Falha ao abrir changelog: {e}")
 
-    def _show_faq(self):
-        """FAQ - Perguntas Frequentes"""
-        text = (
-            "═══════════════════════════════════════════════════════════════════\n"
-            "                    PERGUNTAS FREQUENTES (FAQ)\n"
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "❓ O PROGRAMA NÃO DETECTA MINHA CENA!\n\n"
-            "   ✅ Verifique:\n"
-            "   • A região de captura está correta?\n"
-            "     → Menu Visualizar → Exibir Área de Captura\n"
-            "   • A imagem de referência é nítida e clara?\n"
-            "     → Use imagens sem compressão, PNG recomendado\n"
-            "   • O limiar não está muito alto?\n"
-            "     → Tente reduzir para 0.88-0.90\n"
-            "   • A fonte de captura está ativa?\n"
-            "     → Verifique se a janela/monitor está visível\n\n"
-
-            "❓ A DETECÇÃO ESTÁ MUITO LENTA!\n\n"
-            "   ✅ Soluções:\n"
-            "   • Reduza a área de captura (região menor)\n"
-            "     → Capture apenas a parte essencial da tela\n"
-            "   • Aumente o intervalo de verificação\n"
-            "     → Menu Configurações → Limiar → Intervalo: 0.8s-1.0s\n"
-            "   • Feche outros programas pesados\n"
-            "     → Libere RAM e CPU para o SwitchPilot\n"
-            "   • Use região menor na referência\n"
-            "     → Imagens menores processam mais rápido\n\n"
-
-            "❓ OBS NÃO CONECTA!\n\n"
-            "   ✅ Verifique:\n"
-            "   • OBS WebSocket 5.x está ativo?\n"
-            "     → OBS: Ferramentas → Configurações WebSocket\n"
-            "     → Marque 'Ativar servidor WebSocket'\n"
-            "   • Porta está correta (4455)?\n"
-            "     → Padrão é 4455, mas pode ser alterada\n"
-            "   • Senha configurada corretamente?\n"
-            "     → Cole exatamente como aparece no OBS\n"
-            "   • OBS está rodando?\n"
-            "     → Inicie o OBS antes de conectar\n"
-            "   • Firewall não está bloqueando?\n"
-            "     → Adicione exceção para OBS e SwitchPilot\n\n"
-
-            "❓ VMIX NÃO RESPONDE!\n\n"
-            "   ✅ Verifique:\n"
-            "   • API HTTP está ativada no vMix?\n"
-            "     → vMix: Configurações → Web Controller\n"
-            "     → Marque 'Enable Web Controller'\n"
-            "   • Porta está correta (8088)?\n"
-            "     → Padrão é 8088\n"
-            "   • Nome da cena está exato?\n"
-            "     → Cuidado com maiúsculas/minúsculas\n"
-            "     → Exemplo: 'Camera 1' ≠ 'camera 1'\n"
-            "   • vMix está rodando?\n"
-            "     → Inicie o vMix antes de conectar\n\n"
-
-            "❓ COMO MELHORAR A PRECISÃO?\n\n"
-            "   ✅ Dicas:\n"
-            "   • Use imagens de referência nítidas\n"
-            "     → Formato PNG sem compressão\n"
-            "     → Resolução original, sem redimensionamento\n"
-            "   • Capture apenas a parte única da cena\n"
-            "     → Evite áreas comuns entre cenas\n"
-            "     → Foque em elementos distintivos\n"
-            "   • Evite áreas com movimento constante\n"
-            "     → Não capture relógios, contadores\n"
-            "     → Evite áreas com vídeo em loop\n"
-            "   • Ajuste o limiar para 0.92-0.95\n"
-            "     → Mais alto = mais preciso\n"
-            "     → Teste e ajuste conforme necessário\n\n"
-
-            "❓ POSSO USAR COM STREAMLABS?\n\n"
-            "   ⚠️ Depende:\n"
-            "   • StreamLabs OBS (SLOBS): SIM ✅\n"
-            "     → Funciona com WebSocket igual ao OBS Studio\n"
-            "     → Configure da mesma forma\n"
-            "   • StreamLabs Desktop: NÃO ❌\n"
-            "     → Não possui API/WebSocket disponível\n"
-            "     → Use OBS Studio ou vMix\n\n"
-
-            "❓ FUNCIONA COM TWITCH/YOUTUBE/FACEBOOK?\n\n"
-            "   ✅ SIM! Funciona com TODAS as plataformas!\n"
-            "   • O SwitchPilot controla apenas o OBS/vMix\n"
-            "   • Não importa onde você transmite\n"
-            "   • Compatível com:\n"
-            "     → Twitch\n"
-            "     → YouTube\n"
-            "     → Facebook Gaming\n"
-            "     → TikTok Live\n"
-            "     → Qualquer plataforma de streaming\n\n"
-
-            "❓ PRECISO DE NDI?\n\n"
-            "   ❌ NÃO! NDI é completamente opcional.\n"
-            "   • Monitor: Captura tela diretamente ✅\n"
-            "     → Funciona sem nada adicional\n"
-            "   • Janela: Captura janela específica ✅\n"
-            "     → Funciona sem nada adicional\n"
-            "   • NDI: Apenas se você usa fontes NDI\n"
-            "     → Necessário apenas para casos específicos\n\n"
-
-            "❓ QUANTO DE CPU/RAM O PROGRAMA USA?\n\n"
-            "   📊 Uso médio:\n"
-            "   • CPU: 2-8% (depende da configuração)\n"
-            "     → Região menor = menos CPU\n"
-            "     → Intervalo maior = menos CPU\n"
-            "   • RAM: 100-200 MB\n"
-            "     → Muito leve!\n"
-            "   • Performance:\n"
-            "     → ~0.54s por ciclo de detecção\n"
-            "     → Otimizado para uso contínuo\n\n"
-
-            "❓ POSSO USAR EM MÚLTIPLOS MONITORES?\n\n"
-            "   ✅ SIM!\n"
-            "   • Selecione o monitor específico na configuração\n"
-            "   • Ou capture uma janela de qualquer monitor\n"
-            "   • O programa detecta todos os monitores\n\n"
-
-            "═══════════════════════════════════════════════════════════════════\n"
-            "💡 Não encontrou sua pergunta? Entre no Discord ou abra um issue!\n"
-            "═══════════════════════════════════════════════════════════════════"
-        )
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("FAQ - Perguntas Frequentes")
-        dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        enable_dark_title_bar_for_window(dlg)
-        layout = QVBoxLayout(dlg)
-        te = QTextEdit(dlg)
-        te.setReadOnly(True)
-        te.setPlainText(text)
-        te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-        layout.addWidget(te)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
-        buttons.rejected.connect(dlg.reject)
-        layout.addWidget(buttons)
-        dlg.resize(900, 750)
-        dlg.exec_()
-
-    def _show_troubleshooting(self):
-        """Troubleshooting - Solução de Problemas"""
-        text = (
-            "═══════════════════════════════════════════════════════════════════\n"
-            "                       SOLUÇÃO DE PROBLEMAS\n"
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "🔴 PROGRAMA NÃO ABRE\n\n"
-            "   ✅ Soluções:\n"
-            "   1. Verifique os requisitos mínimos:\n"
-            "      • Windows 10/11 64-bit\n"
-            "      • 4 GB RAM mínimo\n"
-            "      • 200 MB espaço livre\n\n"
-            "   2. Antivírus pode estar bloqueando:\n"
-            "      • Adicione exceção no Windows Defender\n"
-            "      • Caminho: C:\\Program Files\\SwitchPilot\\\n"
-            "      • Ou temporariamente desative e teste\n\n"
-            "   3. Execute como administrador:\n"
-            "      • Botão direito no ícone\n"
-            "      • 'Executar como administrador'\n\n"
-            "   4. Reinstale o programa:\n"
-            "      • Desinstale completamente\n"
-            "      • Baixe versão mais recente\n"
-            "      • Instale novamente\n\n"
-
-            "🔴 ERRO AO CAPTURAR TELA\n\n"
-            "   ✅ Soluções:\n"
-            "   1. Execute como administrador:\n"
-            "      • Necessário para captura de tela\n"
-            "      • Botão direito → Executar como admin\n\n"
-            "   2. Desative 'Otimizações de tela cheia':\n"
-            "      • Propriedades do SwitchPilot.exe\n"
-            "      • Aba 'Compatibilidade'\n"
-            "      • Desmarque otimizações\n\n"
-            "   3. Tente captura de Janela:\n"
-            "      • Ao invés de Monitor inteiro\n"
-            "      • Capture a janela do OBS/Game\n\n"
-            "   4. Atualize drivers de vídeo:\n"
-            "      • NVIDIA GeForce Experience\n"
-            "      • AMD Radeon Software\n"
-            "      • Intel Driver & Support Assistant\n\n"
-
-            "🔴 CPU/MEMÓRIA MUITO ALTA\n\n"
-            "   ✅ Otimizações:\n"
-            "   1. Aumente intervalo de verificação:\n"
-            "      • Menu Configurações → Limiar\n"
-            "      • Intervalo: 0.5s → 1.0s ou 1.5s\n"
-            "      • Reduz verificações por segundo\n\n"
-            "   2. Reduza área de captura:\n"
-            "      • Capture apenas o necessário\n"
-            "      • Região menor = menos processamento\n"
-            "      • Exemplo: 200x200 ao invés de 1920x1080\n\n"
-            "   3. Use menos referências simultâneas:\n"
-            "      • Remova referências não utilizadas\n"
-            "      • Máximo 5-10 referências ativas\n\n"
-            "   4. Feche programas desnecessários:\n"
-            "      • Chrome/Firefox com muitas abas\n"
-            "      • Discord (use versão web)\n"
-            "      • Programas de RGB/periféricos\n\n"
-
-            "🔴 FALSOS POSITIVOS (DETECTA ERRADO)\n\n"
-            "   ✅ Ajustes:\n"
-            "   1. Aumente o limiar:\n"
-            "      • Menu Configurações → Limiar\n"
-            "      • Estático: 0.90 → 0.95 ou mais\n"
-            "      • Mais rigoroso = menos erros\n\n"
-            "   2. Capture área mais específica:\n"
-            "      • Evite áreas comuns entre cenas\n"
-            "      • Foque em elementos únicos\n"
-            "      • Exemplo: Logo ao invés de fundo\n\n"
-            "   3. Use referência mais distinta:\n"
-            "      • Imagem com características únicas\n"
-            "      • Evite fundos lisos ou gradientes\n"
-            "      • Prefira áreas com texto/logo\n\n"
-            "   4. Ative modo sequência:\n"
-            "      • Menu Configurações → Limiar\n"
-            "      • Sequência: 2 ou 3 detecções\n"
-            "      • Confirma antes de executar ação\n\n"
-
-            "🔴 NÃO DETECTA NADA (FALSOS NEGATIVOS)\n\n"
-            "   ✅ Verificações:\n"
-            "   1. Limiar não está muito alto:\n"
-            "      • Verifique se está em 0.98+\n"
-            "      • Reduza para 0.88-0.92\n"
-            "      • Teste com 0.85 temporariamente\n\n"
-            "   2. Região de captura está correta:\n"
-            "      • Menu Visualizar → Exibir Área\n"
-            "      • Verifique se cobre a cena\n"
-            "      • Redesenhe se necessário\n\n"
-            "   3. Referência corresponde à captura:\n"
-            "      • Mesma resolução/escala\n"
-            "      • Sem efeitos/filtros diferentes\n"
-            "      • Capture referência novamente\n\n"
-            "   4. Fonte de captura está ativa:\n"
-            "      • Janela não minimizada\n"
-            "      • Monitor ligado e visível\n"
-            "      • Sem proteção de DRM\n\n"
-
-            "🔴 ATRASO NA DETECÇÃO\n\n"
-            "   ✅ Melhorias:\n"
-            "   1. Reduza intervalo:\n"
-            "      • Menu Configurações → Limiar\n"
-            "      • Intervalo: 1.0s → 0.3s ou 0.5s\n"
-            "      • Verifica mais vezes por segundo\n\n"
-            "   2. Use região menor:\n"
-            "      • Área menor processa mais rápido\n"
-            "      • Capture apenas o essencial\n\n"
-            "   3. Feche outros programas:\n"
-            "      • Libere CPU e RAM\n"
-            "      • Priorize SwitchPilot + OBS/vMix\n\n"
-            "   4. SSD ao invés de HD:\n"
-            "      • Se possível, use SSD\n"
-            "      • Acesso mais rápido aos arquivos\n\n"
-
-            "🔴 ERRO DE CONEXÃO OBS/VMIX\n\n"
-            "   ✅ Checklist:\n"
-            "   • Programa (OBS/vMix) está aberto? ✓\n"
-            "   • WebSocket/API está ativo? ✓\n"
-            "   • Porta está correta? ✓\n"
-            "   • Senha está correta? ✓\n"
-            "   • Firewall não está bloqueando? ✓\n"
-            "   • IP é 'localhost' ou '127.0.0.1'? ✓\n\n"
-
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "📞 AINDA COM PROBLEMAS?\n\n"
-            "   1. 🌐 Entre no Discord:\n"
-            "      discord.gg/2MKdsQpMFt\n\n"
-            "   2. 🐛 Abra um issue no GitHub:\n"
-            "      github.com/Fabianob19/SwitchPilot/issues\n\n"
-            "   3. 📧 Envie email:\n"
-            "      fabianob19@gmail.com\n\n"
-            "   📋 Ao reportar, inclua:\n"
-            "   • Versão do SwitchPilot\n"
-            "   • Sistema operacional\n"
-            "   • Descrição detalhada do erro\n"
-            "   • Capturas de tela (se possível)\n"
-            "   • Logs do programa\n\n"
-
-            "═══════════════════════════════════════════════════════════════════"
-        )
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Troubleshooting - Solução de Problemas")
-        dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        enable_dark_title_bar_for_window(dlg)
-        layout = QVBoxLayout(dlg)
-        te = QTextEdit(dlg)
-        te.setReadOnly(True)
-        te.setPlainText(text)
-        te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-        layout.addWidget(te)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
-        buttons.rejected.connect(dlg.reject)
-        layout.addWidget(buttons)
-        dlg.resize(900, 750)
-        dlg.exec_()
-
     def _open_discord(self):
         """Abrir Discord no navegador"""
         QDesktopServices.openUrl(QUrl("https://discord.gg/2MKdsQpMFt"))
@@ -1338,124 +880,6 @@ class MainWindow(QMainWindow):
     def _open_issues(self):
         """Abrir GitHub Issues no navegador"""
         QDesktopServices.openUrl(QUrl("https://github.com/Fabianob19/SwitchPilot/issues"))
-
-    def _show_requirements(self):
-        """Requisitos do Sistema"""
-        import platform
-        import psutil
-
-        # Detectar informações do sistema
-        system_info = {
-            'os': platform.system(),
-            'os_version': platform.version(),
-            'os_release': platform.release(),
-            'architecture': platform.machine(),
-            'processor': platform.processor(),
-            'ram_gb': round(psutil.virtual_memory().total / (1024**3), 1),
-            'python_version': platform.python_version()
-        }
-
-        text = (
-            "═══════════════════════════════════════════════════════════════════\n"
-            "                      REQUISITOS DO SISTEMA\n"
-            "═══════════════════════════════════════════════════════════════════\n\n"
-
-            "💻 REQUISITOS MÍNIMOS\n\n"
-            "   Sistema Operacional:  Windows 10 64-bit ou superior\n"
-            "   Processador:          Intel i3 / AMD Ryzen 3 (2 núcleos)\n"
-            "   Memória RAM:          4 GB\n"
-            "   Espaço em Disco:      200 MB livres\n"
-            "   Placa de Vídeo:       Integrada (Intel HD, AMD)\n"
-            "   Resolução:            1280x720 ou superior\n\n"
-
-            "🚀 REQUISITOS RECOMENDADOS\n\n"
-            "   Sistema Operacional:  Windows 11 64-bit\n"
-            "   Processador:          Intel i5 / AMD Ryzen 5 (4+ núcleos)\n"
-            "   Memória RAM:          8 GB ou mais\n"
-            "   Espaço em Disco:      500 MB livres (SSD recomendado)\n"
-            "   Placa de Vídeo:       Dedicada (NVIDIA GTX, AMD RX)\n"
-            "   Resolução:            1920x1080 ou superior\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "🎯 PARA USO COM OBS STUDIO\n\n"
-            "   • OBS Studio 28.0 ou superior\n"
-            "   • Plugin WebSocket 5.x ativado\n"
-            "     (já incluído no OBS 28+)\n"
-            "   • Porta 4455 disponível (padrão)\n"
-            "   • Senha configurada no WebSocket\n\n"
-
-            "🎯 PARA USO COM VMIX\n\n"
-            "   • vMix 20.0 ou superior\n"
-            "   • API HTTP ativada nas configurações\n"
-            "   • Porta 8088 disponível (padrão)\n"
-            "   • Web Controller habilitado\n\n"
-
-            "🎯 RECURSOS OPCIONAIS\n\n"
-            "   • NDI Tools (apenas se usar fontes NDI)\n"
-            "   • .NET Framework 4.8 (Windows 10)\n"
-            "   • Microsoft Visual C++ 2019 Redistributable\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            f"✅ SEU SISTEMA ATUAL\n\n"
-            f"   Sistema:              {system_info['os']} {system_info['os_release']}\n"
-            f"   Arquitetura:          {system_info['architecture']}\n"
-            f"   Processador:          {system_info['processor'][:50]}\n"
-            f"   Memória RAM:          {system_info['ram_gb']} GB\n\n"
-
-            "───────────────────────────────────────────────────────────────────\n\n"
-
-            "📊 VERIFICAÇÃO DE COMPATIBILIDADE\n\n"
-        )
-
-        # Verificar compatibilidade
-        checks = []
-
-        # SO
-        if 'Windows' in system_info['os'] and ('10' in system_info['os_release'] or '11' in system_info['os_release']):
-            checks.append("   ✅ Sistema Operacional: Compatível")
-        else:
-            checks.append("   ⚠️ Sistema Operacional: Verifique se é Windows 10/11")
-
-        # RAM
-        if system_info['ram_gb'] >= 8:
-            checks.append("   ✅ Memória RAM: Excelente (8+ GB)")
-        elif system_info['ram_gb'] >= 4:
-            checks.append("   ⚠️ Memória RAM: Mínimo atendido (4+ GB)")
-        else:
-            checks.append("   ❌ Memória RAM: Insuficiente (menos de 4 GB)")
-
-        # Arquitetura
-        if '64' in system_info['architecture'] or 'AMD64' in system_info['architecture']:
-            checks.append("   ✅ Arquitetura: 64-bit compatível")
-        else:
-            checks.append("   ⚠️ Arquitetura: Verifique se é 64-bit")
-
-        text += "\n".join(checks)
-
-        text += (
-            "\n\n"
-            "═══════════════════════════════════════════════════════════════════\n"
-            "💡 Seu sistema atende aos requisitos? Baixe a versão mais recente!\n"
-            "═══════════════════════════════════════════════════════════════════"
-        )
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Requisitos do Sistema")
-        dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        enable_dark_title_bar_for_window(dlg)
-        layout = QVBoxLayout(dlg)
-        te = QTextEdit(dlg)
-        te.setReadOnly(True)
-        te.setPlainText(text)
-        te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-        layout.addWidget(te)
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dlg)
-        buttons.rejected.connect(dlg.reject)
-        layout.addWidget(buttons)
-        dlg.resize(850, 700)
-        dlg.exec_()
 
     def _check_updates(self):
         """Verificar atualizações no GitHub"""
@@ -1571,6 +995,7 @@ class MainWindow(QMainWindow):
                 "Verifique manualmente em:\n"
                 "https://github.com/Fabianob19/SwitchPilot/releases"
             )
+
 
     def _show_about(self):
         """Sobre o SwitchPilot com agradecimentos"""
