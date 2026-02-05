@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.6.1] - 2026-02-05
 ### Fixed
-- **Detection**: Runtime fallback for dynamic textures (noise/static). When histogram matches perfectly but NCC fails, NCC weight is redistributed to histogram, raising detection score from ~0.71 to ~0.91.
+- **Detection**: Runtime NCC Fallback for dynamic textures (noise/static/particles).
+  - **Problem**: Images with random textures (where pixels change position each frame) resulted in NCC scores near zero, even when color distribution was identical, causing final scores of ~0.71.
+  - **Solution**: System now detects when Histogram is near-perfect (>95%) but NCC fails (<10%), redistributing NCC weight to Histogram, raising final score to ~0.91.
+  - Works transparently with the default 0.90 threshold.
+
+### Added
+- `switchpilot/utils/paths.py`: New utility module for cross-environment path resolution (dev and PyInstaller).
+- `rthook_skip_zstd.py`: Runtime hook to resolve `zstandard` module conflicts in PyInstaller builds.
+
+### Changed
+- Refactored `__init__.py` and `help_center.py` to use the new path resolution system.
 
 ## [1.6.0] - 2026-02-03
 ### Added
