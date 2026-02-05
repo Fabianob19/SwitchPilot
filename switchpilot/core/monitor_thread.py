@@ -197,8 +197,32 @@ class MonitorThread(QThread):
         s_hist = self._compute_hist_score(ref_gray_ds, frame_gray_ds)
         s_ncc = self._compute_ncc_score(ref_gray_ds, frame_gray_ds)
         s_lbp = self._compute_lbp_score(ref_gray_ds, frame_gray_ds)
-        s = self.weight_hist * s_hist + self.weight_ncc * s_ncc + self.weight_lbp * s_lbp
-        self.log_signal.emit(f"Scores -> Hist:{s_hist:.3f} NCC:{s_ncc:.3f} LBP:{s_lbp:.3f} | S:{s:.3f}", "debug")
+        
+        # ============================================================================
+        # FALLBACK DE RUNTIME: Detecção de Texturas Dinâmicas (Ruído/Chuvisco)
+        # ============================================================================
+        # Problema: Imagens de ruído (chuvisco) têm histograma idêntico mas NCC=0
+        # porque os pixels mudam de posição a cada frame.
+        # Solução: Se Hist é quase perfeito (>0.95) mas NCC falhou (<0.10),
+        # ignoramos o NCC e redistribuímos seu peso para o Histograma.
+        # Isso eleva o score de ~0.71 para ~0.91, permitindo detecção com threshold 0.90.
+        # ============================================================================
+        w_hist = self.weight_hist
+        w_ncc = self.weight_ncc
+        w_lbp = self.weight_lbp
+        adapted = False
+        
+        if s_hist > 0.95 and s_ncc < 0.10:
+            # Textura dinâmica detectada: NCC não é confiável
+            w_hist += w_ncc  # Transfere peso do NCC para Hist
+            w_ncc = 0.0
+            adapted = True
+        
+        s = w_hist * s_hist + w_ncc * s_ncc + w_lbp * s_lbp
+        
+        # Log com indicador de adaptação
+        adapt_tag = "[ADAPT] " if adapted else ""
+        self.log_signal.emit(f"Scores {adapt_tag}-> Hist:{s_hist:.3f} NCC:{s_ncc:.3f} LBP:{s_lbp:.3f} | S:{s:.3f}", "debug")
         return s
 
     def run(self):

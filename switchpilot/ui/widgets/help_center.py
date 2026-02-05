@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QFont, QIcon
+from switchpilot.utils.paths import get_resource_path
 
 class HelpCenterDialog(QDialog):
     def __init__(self, parent=None, initial_topic="tutorial"):
@@ -116,8 +117,9 @@ class HelpCenterDialog(QDialog):
     def _load_markdown(self, relative_path):
         """Lê o arquivo .md e converte para HTML."""
         try:
-            # Resolve caminho absoluto baseado na raiz do projeto (assumindo execução via main.py)
-            with open(relative_path, 'r', encoding='utf-8') as f:
+            # Resolve caminho absoluto baseado na raiz do projeto e PyInstaller
+            full_path = get_resource_path(relative_path)
+            with open(full_path, 'r', encoding='utf-8') as f:
                 md_text = f.read()
                 
             # Converter Markdown para HTML

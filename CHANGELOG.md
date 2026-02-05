@@ -5,10 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.1] - 2026-02-05
+### Fixed
+- **Detection**: Runtime fallback for dynamic textures (noise/static). When histogram matches perfectly but NCC fails, NCC weight is redistributed to histogram, raising detection score from ~0.71 to ~0.91.
+
+## [1.6.0] - 2026-02-03
 ### Added
-- Unified Help Center (`docs/help/`) with Markdown support for Tutorial, FAQ, Troubleshooting, etc.
-- `llms.txt` for better AI context discovery.
+- Unified Help Center (`docs/help/`) with Markdown support.
+- `llms.txt` for AI discovery.
 - Developer documentation structure (`docs/developer/`).
 
 ### Changed

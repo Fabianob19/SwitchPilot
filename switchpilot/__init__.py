@@ -7,13 +7,13 @@ Módulo principal do SwitchPilot, contendo:
 - ui: Interface gráfica PyQt5
 """
 
-import os
+from switchpilot.utils.paths import get_resource_path
 
 def _get_version():
     """Lê a versão do arquivo VERSION na raiz do projeto"""
     try:
         # Caminho para o arquivo VERSION na raiz do projeto
-        version_file = os.path.join(os.path.dirname(__file__), '..', 'VERSION')
+        version_file = get_resource_path('VERSION')
         with open(version_file, 'r', encoding='utf-8') as f:
             return f.read().strip()
     except (FileNotFoundError, IOError):

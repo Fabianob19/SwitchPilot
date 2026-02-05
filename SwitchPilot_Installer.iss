@@ -2,7 +2,7 @@
 ; Gera um instalador .exe profissional para Windows
 
 #define MyAppName "SwitchPilot"
-#define MyAppVersion "1.5.2"
+#define MyAppVersion "1.6.1"
 #define MyAppPublisher "Fabianob19"
 #define MyAppURL "https://github.com/Fabianob19/SwitchPilot"
 #define MyAppExeName "SwitchPilot.exe"
@@ -50,7 +50,7 @@ Name: "quicklaunchicon"; Description: "Criar Ã­cone na Barra de Tarefas"; Grou
 
 [Files]
 ; Arquivos principais (toda a pasta release_v1.5.2)
-Source: "release_v1.5.2\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "release_v{#MyAppVersion}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Ãcone do aplicativo (garantir que seja copiado)
 Source: "{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Arquivos de documentaÃ§Ã£o
