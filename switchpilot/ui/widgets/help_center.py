@@ -5,8 +5,9 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox, QSplitter, QWidget, QLabel
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont
 from switchpilot.utils.paths import get_resource_path
+
 
 class HelpCenterDialog(QDialog):
     def __init__(self, parent=None, initial_topic="tutorial"):
@@ -93,7 +94,7 @@ class HelpCenterDialog(QDialog):
 
         for key, (label, _) in self.topics.items():
             # Armazena a chave (ex: 'tutorial') como dado oculto do item
-            item_widget = self.menu_list.addItem(label)
+            self.menu_list.addItem(label)
             item = self.menu_list.item(self.menu_list.count() - 1)
             item.setData(Qt.UserRole, key)
 

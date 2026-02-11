@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 
 
 a = Analysis(
@@ -34,7 +35,7 @@ exe = EXE(
     entitlements_file=None,
     icon=['ICONE.ico'],
     version='version_info.txt',  # Adicionar informações de versão
-    manifest='switchpilot.manifest',  # Adicionar manifest do Windows
+    manifest=os.path.abspath('switchpilot.manifest'),  # Adicionar manifest do Windows
 )
 coll = COLLECT(
     exe,
