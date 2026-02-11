@@ -1,11 +1,10 @@
 import os
 import markdown
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QTextBrowser, 
-    QDialogButtonBox, QSplitter, QWidget, QLabel
+    QDialog, QVBoxLayout, QListWidget, QTextBrowser, 
+    QDialogButtonBox, QSplitter
 )
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
 from switchpilot.utils.paths import get_resource_path
 
 
