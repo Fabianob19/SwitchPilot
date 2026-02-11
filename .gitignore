@@ -20,7 +20,7 @@ venv.bak/
 build/
 dist/
 *.spec.backup
-switchpilot.manifest
+
 *.exe.manifest
 
 # === Arquivos Binários ===
