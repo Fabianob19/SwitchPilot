@@ -25,7 +25,7 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 class NDIDiscoveryWorker(QThread):
     """Worker thread para descoberta assíncrona de fontes NDI.
-    
+
     Evita travar a UI durante a descoberta de fontes.
     """
     # Sinais emitidos pela thread
@@ -106,7 +106,7 @@ class NDIDiscoveryWorker(QThread):
 
 class NDICaptureWorker(QThread):
     """Worker thread para captura assíncrona de frames NDI.
-    
+
     Evita travar a UI durante a captura de frames.
     """
     # Sinais emitidos pela thread
@@ -130,10 +130,10 @@ class NDICaptureWorker(QThread):
 
         ndi_find = None
         ndi_recv = None
-        
+
         try:
             self.progress_update.emit("Inicializando NDI...")
-            
+
             # Inicializar NDI
             if not NDI.initialize():
                 self.error_occurred.emit("Falha ao inicializar NDI")

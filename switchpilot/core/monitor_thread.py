@@ -197,7 +197,7 @@ class MonitorThread(QThread):
         s_hist = self._compute_hist_score(ref_gray_ds, frame_gray_ds)
         s_ncc = self._compute_ncc_score(ref_gray_ds, frame_gray_ds)
         s_lbp = self._compute_lbp_score(ref_gray_ds, frame_gray_ds)
-        
+
         # ============================================================================
         # FALLBACK DE RUNTIME: Detecção de Texturas Dinâmicas (Ruído/Chuvisco)
         # ============================================================================
@@ -211,15 +211,15 @@ class MonitorThread(QThread):
         w_ncc = self.weight_ncc
         w_lbp = self.weight_lbp
         adapted = False
-        
+
         if s_hist > 0.95 and s_ncc < 0.10:
             # Textura dinâmica detectada: NCC não é confiável
             w_hist += w_ncc  # Transfere peso do NCC para Hist
             w_ncc = 0.0
             adapted = True
-        
+
         s = w_hist * s_hist + w_ncc * s_ncc + w_lbp * s_lbp
-        
+
         # Log com indicador de adaptação
         adapt_tag = "[ADAPT] " if adapted else ""
         self.log_signal.emit(f"Scores {adapt_tag}-> Hist:{s_hist:.3f} NCC:{s_ncc:.3f} LBP:{s_lbp:.3f} | S:{s:.3f}", "debug")
@@ -256,7 +256,7 @@ class MonitorThread(QThread):
                         self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada do disco.", "debug")
                     else:
                         self.log_signal.emit(f"Falha ao carregar imagem de referência: {ref['path']}", "error")
-                
+
                 if img is not None:
                     prepared_references.append({'type': 'static', 'name': ref.get('name', ''), 'img': img, 'actions': ref.get('actions', [])})
             elif ref.get('type') == 'sequence':
@@ -279,7 +279,7 @@ class MonitorThread(QThread):
                             frames.append(img)
                     if frames:
                         self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada do disco com {len(frames)} frames.", "debug")
-                
+
                 if frames:
                     prepared_references.append({'type': 'sequence', 'name': ref.get('name', ''), 'frames': frames, 'actions': ref.get('actions', [])})
                     max_sequence_len = max(max_sequence_len, len(frames))

@@ -637,12 +637,14 @@ class MainWindow(QMainWindow):
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowNestedDocks | QMainWindow.AllowTabbedDocks)
 
         obs_config_dock = QDockWidget("Configuração OBS", self)
+        obs_config_dock.setObjectName("obsConfigDock")
         self.obs_config_widget = OBSConfigWidget()
         obs_config_dock.setWidget(self.obs_config_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, obs_config_dock)
         view_menu.addAction(obs_config_dock.toggleViewAction())
 
         vmix_config_dock = QDockWidget("Configuração vMix", self)
+        vmix_config_dock.setObjectName("vmixConfigDock")
         self.vmix_config_widget = VMixConfigWidget()
         vmix_config_dock.setWidget(self.vmix_config_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, vmix_config_dock)
@@ -715,6 +717,7 @@ class MainWindow(QMainWindow):
             print(f"DEBUG: Erro ao tentar encontrar/nomear QTabBar dos docks: {e}")
 
         self.reference_manager_dock_widget = QDockWidget("Gerenciador de Referências", self)
+        self.reference_manager_dock_widget.setObjectName("referenceManagerDock")
         self.reference_manager_widget = ReferenceManagerWidget(main_controller=None)
         self.reference_manager_dock_widget.setWidget(self.reference_manager_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.reference_manager_dock_widget)
