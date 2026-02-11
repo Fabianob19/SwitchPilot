@@ -14,15 +14,15 @@ class HelpCenterDialog(QDialog):
         self.setWindowTitle("Central de Ajuda - SwitchPilot")
         self.resize(1000, 700)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        
+
         # Enable custom title bar integration check if needed, strictly minimal here
-        
+
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
-        
+
         # Splitter Layout: Menu (Left) | Content (Right)
         self.splitter = QSplitter(Qt.Horizontal)
-        
+
         # 1. Menu Lateral
         self.menu_list = QListWidget()
         self.menu_list.setFixedWidth(220)
@@ -49,7 +49,7 @@ class HelpCenterDialog(QDialog):
         """)
         self._populate_menu()
         self.menu_list.currentItemChanged.connect(self._on_topic_changed)
-        
+
         # 2. Área de Conteúdo
         self.content_browser = QTextBrowser()
         self.content_browser.setOpenExternalLinks(True)
@@ -68,9 +68,9 @@ class HelpCenterDialog(QDialog):
         self.splitter.addWidget(self.menu_list)
         self.splitter.addWidget(self.content_browser)
         self.splitter.setStretchFactor(1, 1)  # Content expands
-        
+
         self.layout.addWidget(self.splitter)
-        
+
         # Botões
         self.buttons = QDialogButtonBox(QDialogButtonBox.Close)
         self.buttons.rejected.connect(self.reject)
@@ -90,7 +90,7 @@ class HelpCenterDialog(QDialog):
             "requirements": ("💻 Requisitos", "docs/help/requirements.md"),
             "about": ("ℹ️ Sobre", "docs/help/about.md"),
         }
-        
+
         for key, (label, _) in self.topics.items():
             # Armazena a chave (ex: 'tutorial') como dado oculto do item
             item_widget = self.menu_list.addItem(label)
@@ -108,10 +108,10 @@ class HelpCenterDialog(QDialog):
     def _on_topic_changed(self, current, previous):
         if not current:
             return
-            
+
         topic_key = current.data(Qt.UserRole)
         _, file_path = self.topics.get(topic_key)
-        
+
         self._load_markdown(file_path)
 
     def _load_markdown(self, relative_path):
@@ -121,10 +121,10 @@ class HelpCenterDialog(QDialog):
             full_path = get_resource_path(relative_path)
             with open(full_path, 'r', encoding='utf-8') as f:
                 md_text = f.read()
-                
+
             # Converter Markdown para HTML
             html_content = markdown.markdown(md_text)
-            
+
             # Estilização CSS básica para o HTML renderizado
             styled_html = f"""
             <html>
@@ -148,6 +148,6 @@ class HelpCenterDialog(QDialog):
             </html>
             """
             self.content_browser.setHtml(styled_html)
-            
+
         except Exception as e:
             self.content_browser.setHtml(f"<h1>Erro ao carregar ajuda</h1><p>Não foi possível ler o arquivo: {relative_path}</p><p>Detalhe: {str(e)}</p>")

@@ -9,6 +9,7 @@ Módulo principal do SwitchPilot, contendo:
 
 from switchpilot.utils.paths import get_resource_path
 
+
 def _get_version():
     """Lê a versão do arquivo VERSION na raiz do projeto"""
     try:
@@ -19,6 +20,7 @@ def _get_version():
     except (FileNotFoundError, IOError):
         # Fallback se o arquivo não existir
         return "1.5.2"
+
 
 __version__ = _get_version()
 __author__ = "Fabianob19"

@@ -6,10 +6,8 @@ Gerencia persistência de todas as configurações da aplicação.
 
 import json
 import os
-import shutil
 import zipfile
-import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 def get_config_dir():

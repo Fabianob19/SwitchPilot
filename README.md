@@ -25,6 +25,7 @@
 - **🖱️ Flexible Capture**: Monitor specific windows or screen regions.
 - **🎨 Modern UI**: Dark mode interface built with PyQt5, featuring a custom title bar and responsive layout.
 - **⚡ Low Latency**: Optimized processing (~0.5s cycle) with minimal CPU usage (~5%).
+- **🎯 Per-Reference PGM**: Each reference can have its own PGM Region, enabling monitoring of multiple areas or cameras simultaneously.
 
 ## 🛠️ Configuration
 

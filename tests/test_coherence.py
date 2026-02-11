@@ -1,17 +1,19 @@
 import cv2
 import numpy as np
 
+
 def calculate_coherence_score(name, img):
     # Shift image by 1 pixel right and 1 pixel down
     rows, cols = img.shape
     M = np.float32([[1, 0, 1], [0, 1, 1]])
     shifted = cv2.warpAffine(img, M, (cols, rows))
-    
+
     # Calculate NCC between original and shifted
     res = cv2.matchTemplate(img, shifted, cv2.TM_CCOEFF_NORMED)
     score = res[0][0]
     print(f"[{name}] Coherence Score (Shift 1px): {score:.3f}")
     return score
+
 
 # 1. Solid Color (Coherence should be High)
 img_solid = np.full((100, 100), 127, dtype=np.uint8)

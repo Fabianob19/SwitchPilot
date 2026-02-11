@@ -51,12 +51,12 @@ from .action_config_dialog import ActionConfigDialog  # Adicionada importação
 
 
 def get_user_references_dir():
-    """
+    r"""
     Retorna o diretório de referências do usuário.
-    
+
     Windows: %LOCALAPPDATA%\SwitchPilot\references
     (~\AppData\Local\SwitchPilot\references)
-    
+
     Esta pasta NÃO vai para o instalador, cada usuário tem suas próprias referências.
     """
     if os.name == 'nt':  # Windows
@@ -64,7 +64,7 @@ def get_user_references_dir():
         user_dir = os.path.join(appdata, 'SwitchPilot', 'references')
     else:  # Linux/Mac (futuro)
         user_dir = os.path.expanduser('~/.config/SwitchPilot/references')
-    
+
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
 
@@ -1238,18 +1238,18 @@ class ReferenceManagerWidget(QWidget):
             if 0 <= row < len(self.references_data):
                 ref_data = self.references_data[row]
                 pgm_details = ref_data.get('pgm_details')
-                
+
                 # Se tiver detalhes PGM salvos, restaurar e atualizar a UI
                 if pgm_details and pgm_details.get('roi'):
                     self.selected_pgm_details = pgm_details
                     roi = pgm_details['roi']
                     source_name = pgm_details.get('source_name', 'Desconhecido')
-                    
+
                     self.pgm_region_label.setText(
                         f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {source_name}"
                     )
                     self.pgm_region_label.setStyleSheet("color: #a3be8c;")
-                    
+
                     # Notificar mudança de PGM para atualizar overlay/controller
                     self.pgm_selection_changed.emit(pgm_details)
                     # Opção: print debug para confirmar restauração
@@ -1480,7 +1480,7 @@ class ReferenceManagerWidget(QWidget):
 
     def get_all_references_data(self):
         return list(self.references_data)
-    
+
     def save_references_to_disk(self):
         """
         Salva todas as referências em memória para o disco (pasta do usuário).
@@ -1493,18 +1493,18 @@ class ReferenceManagerWidget(QWidget):
                     # Salvar imagem estática
                     filename = f"{ref['name']}.png"
                     filepath = os.path.join(self.references_dir, filename)
-                    
+
                     if cv2.imwrite(filepath, ref['image_data']):
                         ref['path'] = filepath  # Adicionar path à referência
                         saved_count += 1
                     else:
                         print(f"Erro ao salvar referência: {filename}")
-                        
+
                 elif ref.get('type') == 'sequence' and 'image_data' in ref:
                     # Salvar sequência de frames
                     seq_dir = os.path.join(self.references_dir, ref['name'])
                     os.makedirs(seq_dir, exist_ok=True)
-                    
+
                     frame_paths = []
                     for i, frame in enumerate(ref['image_data']):
                         frame_path = os.path.join(seq_dir, f"frame_{i:03d}.png")
@@ -1512,17 +1512,17 @@ class ReferenceManagerWidget(QWidget):
                             frame_paths.append(frame_path)
                         else:
                             print(f"Erro ao salvar frame {i} da sequência: {ref['name']}")
-                    
+
                     if frame_paths:
                         ref['frame_paths'] = frame_paths
                         saved_count += 1
-                        
+
             print(f"✅ {saved_count} referência(s) salva(s) em: {self.references_dir}")
             return saved_count
         except Exception as e:
             print(f"Erro ao salvar referências: {e}")
             return saved_count
-    
+
     def load_references_from_disk(self):
         """
         Carrega referências salvas em disco para memória.
@@ -1550,7 +1550,7 @@ class ReferenceManagerWidget(QWidget):
                                 self.references_data.append(new_ref)
                                 self._display_reference_in_list(new_ref)
                                 loaded_count += 1
-            
+
             # Carregar sequências (subpastas com frames)
             for item in os.listdir(self.references_dir):
                 item_path = os.path.join(self.references_dir, item)
@@ -1565,7 +1565,7 @@ class ReferenceManagerWidget(QWidget):
                             if frame is not None:
                                 frames.append(frame)
                                 frame_paths.append(frame_path)
-                    
+
                     if frames:
                         # Verificar se já existe
                         if not any(r['name'] == item for r in self.references_data):
@@ -1579,11 +1579,11 @@ class ReferenceManagerWidget(QWidget):
                             self.references_data.append(new_ref)
                             self._display_reference_in_list(new_ref)
                             loaded_count += 1
-            
+
             if loaded_count > 0:
                 self.references_updated.emit(self.get_all_references_data())
                 print(f"✅ {loaded_count} referência(s) carregada(s) de: {self.references_dir}")
-            
+
             return loaded_count
         except Exception as e:
             print(f"Erro ao carregar referências: {e}")
@@ -1758,10 +1758,10 @@ class ReferenceManagerWidget(QWidget):
         source_name = ndi_source_data.get('ndi_name', 'Fonte Desconhecida')
         ndi_find = None
         ndi_recv = None
-        
+
         try:
             safe_print(f"[NDI] Iniciando captura da fonte: {source_name}")
-            
+
             # Inicializar NDI
             if not NDI.initialize():
                 safe_print("[NDI] Erro: NDI não pode ser inicializado")
@@ -1779,7 +1779,7 @@ class ReferenceManagerWidget(QWidget):
             # Obter fontes e encontrar a alvo
             sources = NDI.find_get_current_sources(ndi_find)
             target_source = None
-            
+
             for source in (sources or []):
                 if getattr(source, 'ndi_name', '') == source_name:
                     target_source = source
