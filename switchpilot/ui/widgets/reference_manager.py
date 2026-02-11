@@ -38,6 +38,15 @@ except Exception:
     NDI = None
     NDI_AVAILABLE = False
 
+# Import NDI workers for async operations (prevents UI blocking)
+try:
+    from switchpilot.integrations.ndi_controller import NDIDiscoveryWorker, NDICaptureWorker
+    NDI_WORKERS_AVAILABLE = True
+except ImportError:
+    NDIDiscoveryWorker = None
+    NDICaptureWorker = None
+    NDI_WORKERS_AVAILABLE = False
+
 from .action_config_dialog import ActionConfigDialog  # Adicionada importação
 
 
@@ -81,6 +90,7 @@ class ReferenceManagerWidget(QWidget):
     """Widget para gerenciar as imagens de referência para monitoramento."""
     # Sinal para notificar a MainWindow ou outro controller sobre mudanças nas referências
     references_updated = pyqtSignal(list)
+    pgm_selection_changed = pyqtSignal(dict)  # Novo sinal para mudança de PGM via seleção
 
     def __init__(self, parent=None, main_controller=None):
         super().__init__(parent)
@@ -565,7 +575,8 @@ class ReferenceManagerWidget(QWidget):
                                 'name': final_filename,
                                 'type': 'static',
                                 'image_data': first_ref_image.copy(),  # numpy array em memória
-                                'actions': []
+                                'actions': [],
+                                'pgm_details': self.selected_pgm_details.copy() if self.selected_pgm_details else {}
                                 # 'path' NÃO existe até salvar explicitamente
                             }
                             self.references_data.append(new_ref_data)
@@ -1121,24 +1132,71 @@ class ReferenceManagerWidget(QWidget):
             # Logar o erro aqui também seria bom
 
     def _populate_ndi_list(self):
-        """Popula a lista de fontes NDI disponíveis."""
+        """Popula a lista de fontes NDI disponíveis (assíncrono para não travar UI)."""
+        self.ndi_list_combo.clear()
+        self.ndi_list_combo.addItem("Carregando fontes NDI...")
+        self.btn_refresh_ndi.setEnabled(False)
+
+        # Verificar se workers estão disponíveis
+        if not NDI_WORKERS_AVAILABLE or NDIDiscoveryWorker is None:
+            # Fallback para método síncrono (código legado)
+            self._populate_ndi_list_sync()
+            return
+
+        # Usar worker assíncrono
+        self._ndi_discovery_worker = NDIDiscoveryWorker(discovery_timeout=2.0)
+        self._ndi_discovery_worker.sources_found.connect(self._on_ndi_sources_found)
+        self._ndi_discovery_worker.error_occurred.connect(self._on_ndi_discovery_error)
+        self._ndi_discovery_worker.finished_discovery.connect(self._on_ndi_discovery_finished)
+        self._ndi_discovery_worker.start()
+
+    def _on_ndi_sources_found(self, sources: list):
+        """Callback quando fontes NDI são descobertas."""
+        self.ndi_list_combo.clear()
+        if sources:
+            for source in sources:
+                source_name = source.get('name', 'Fonte Desconhecida')
+                source_data = {
+                    'ndi_name': source.get('ndi_name', source_name),
+                    'url_address': source.get('url_address', '')
+                }
+                self.ndi_list_combo.addItem(source_name, userData=source_data)
+            safe_print(f"Encontradas {len(sources)} fontes NDI")
+        else:
+            self.ndi_list_combo.addItem("Nenhuma fonte NDI encontrada")
+
+    def _on_ndi_discovery_error(self, error_msg: str):
+        """Callback quando ocorre erro na descoberta NDI."""
+        safe_print(f"[NDI Discovery Error] {error_msg}")
+
+    def _on_ndi_discovery_finished(self):
+        """Callback quando a descoberta NDI termina."""
+        self.btn_refresh_ndi.setEnabled(True)
+        # Limpar referência ao worker
+        if hasattr(self, '_ndi_discovery_worker'):
+            self._ndi_discovery_worker = None
+
+    def _populate_ndi_list_sync(self):
+        """Versão síncrona (fallback) para popular lista NDI."""
         self.ndi_list_combo.clear()
         try:
             # Inicializar NDI
             if not NDI.initialize():
                 self.ndi_list_combo.addItem("Erro: NDI não pode ser inicializado")
+                self.btn_refresh_ndi.setEnabled(True)
                 return
 
-            # Criar um finder para descobrir fontes NDI (usando configuração padrão)
+            # Criar um finder para descobrir fontes NDI
             ndi_find = NDI.find_create_v2()
             if not ndi_find:
                 self.ndi_list_combo.addItem("Erro: Não foi possível criar NDI finder")
                 NDI.destroy()
+                self.btn_refresh_ndi.setEnabled(True)
                 return
 
-            # Aguardar um pouco para descobrir fontes
+            # Aguardar descoberta (NOTA: isso trava a UI por 2s)
             import time
-            time.sleep(2)  # Aguardar 2 segundos para descoberta
+            time.sleep(2)
 
             # Obter lista de fontes NDI
             sources = NDI.find_get_current_sources(ndi_find)
@@ -1146,16 +1204,14 @@ class ReferenceManagerWidget(QWidget):
             if sources and len(sources) > 0:
                 for source in sources:
                     source_name = source.ndi_name if hasattr(source, 'ndi_name') else str(source)
-                    # Armazenar apenas os dados necessários como string
                     source_data = {
                         'ndi_name': source_name,
                         'url_address': getattr(source, 'url_address', '')
                     }
                     self.ndi_list_combo.addItem(source_name, userData=source_data)
-                print(f"Encontradas {len(sources)} fontes NDI")
+                safe_print(f"Encontradas {len(sources)} fontes NDI")
             else:
                 self.ndi_list_combo.addItem("Nenhuma fonte NDI encontrada")
-                print("Nenhuma fonte NDI descoberta")
 
             # Limpar recursos NDI
             NDI.find_destroy(ndi_find)
@@ -1163,16 +1219,41 @@ class ReferenceManagerWidget(QWidget):
 
         except Exception as e:
             self.ndi_list_combo.addItem("Erro ao listar fontes NDI")
-            print(f"Erro ao tentar listar fontes NDI: {e}")
+            safe_print(f"Erro ao tentar listar fontes NDI: {e}")
             try:
                 NDI.destroy()
             except Exception:
                 pass
+        finally:
+            self.btn_refresh_ndi.setEnabled(True)
 
     def _on_current_item_changed(self, current, previous):
         is_item_selected = current is not None
         self.configure_actions_button.setEnabled(is_item_selected)
         self.remove_reference_button.setEnabled(is_item_selected)
+
+        # Restaurar região PGM da referência selecionada se disponível
+        if is_item_selected:
+            row = self.reference_list_widget.row(current)
+            if 0 <= row < len(self.references_data):
+                ref_data = self.references_data[row]
+                pgm_details = ref_data.get('pgm_details')
+                
+                # Se tiver detalhes PGM salvos, restaurar e atualizar a UI
+                if pgm_details and pgm_details.get('roi'):
+                    self.selected_pgm_details = pgm_details
+                    roi = pgm_details['roi']
+                    source_name = pgm_details.get('source_name', 'Desconhecido')
+                    
+                    self.pgm_region_label.setText(
+                        f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {source_name}"
+                    )
+                    self.pgm_region_label.setStyleSheet("color: #a3be8c;")
+                    
+                    # Notificar mudança de PGM para atualizar overlay/controller
+                    self.pgm_selection_changed.emit(pgm_details)
+                    # Opção: print debug para confirmar restauração
+                    # print(f"[RefMgr] Restaurado PGM de '{ref_data['name']}': ROI={roi}")
 
     def _handle_add_existing_reference(self):
         # Filtros para os tipos de arquivo de imagem mais comuns
@@ -1265,26 +1346,33 @@ class ReferenceManagerWidget(QWidget):
         if reply == QMessageBox.Yes:
             row = self.reference_list_widget.row(current_item)
             self.reference_list_widget.takeItem(row)
-            self.references_data.pop(row)
+            removed_ref_data = self.references_data.pop(row)
 
-            # Opcional: remover o arquivo físico (MANTIDO COMENTADO POR PADRÃO)
-            # try:
-            #     if os.path.exists(removed_ref_data['path']):
-            #         os.remove(removed_ref_data['path'])
-            #         # print(f"Arquivo removido: {removed_ref_data['path']}")  # Log de debug se descomentado
-            # except Exception as e:
-            #     # print(f"Erro ao remover arquivo {removed_ref_data['path']}: {e}")  # Log de debug se descomentado
-            #     QMessageBox.warning(
-            #         self,
-            #         "Erro ao Remover Arquivo",
-            #         (
-            #             f"Não foi possível remover o arquivo físico {removed_ref_data['path']}. "
-            #             "Verifique as permissões."
-            #         ),
-            #     )
+            # Remover arquivo(s) físico(s) do disco para que não reapareçam
+            try:
+                if removed_ref_data.get('type') == 'sequence':
+                    # Sequência: remover pasta inteira
+                    seq_dir = os.path.join(self.references_dir, removed_ref_data.get('name', ''))
+                    if os.path.isdir(seq_dir):
+                        import shutil
+                        shutil.rmtree(seq_dir, ignore_errors=True)
+                        print(f"Pasta de sequência removida: {seq_dir}")
+                else:
+                    # Estática: remover arquivo PNG
+                    ref_path = removed_ref_data.get('path', '')
+                    if ref_path and os.path.exists(ref_path):
+                        os.remove(ref_path)
+                        print(f"Arquivo removido: {ref_path}")
+                    else:
+                        # Tentar pelo nome
+                        alt_path = os.path.join(self.references_dir, f"{removed_ref_data.get('name', '')}.png")
+                        if os.path.exists(alt_path):
+                            os.remove(alt_path)
+                            print(f"Arquivo removido: {alt_path}")
+            except Exception as e:
+                print(f"Erro ao remover arquivo: {e}")
 
-            self.references_updated.emit(self.get_all_references_data())  # Usar getter
-            # REMOVIDO: print(f"Referência removida: {removed_ref_data}")
+            self.references_updated.emit(self.get_all_references_data())
 
     def _handle_configure_actions(self):
         current_item = self.reference_list_widget.currentItem()
@@ -1666,79 +1754,79 @@ class ReferenceManagerWidget(QWidget):
         return frame_paths
 
     def _capture_ndi_frame(self, ndi_source_data):
-        """Captura um frame da fonte NDI especificada."""
+        """Captura um frame da fonte NDI especificada (versão com cleanup correto)."""
+        source_name = ndi_source_data.get('ndi_name', 'Fonte Desconhecida')
+        ndi_find = None
+        ndi_recv = None
+        
         try:
-            source_name = ndi_source_data.get('ndi_name', 'Fonte Desconhecida')
-
+            safe_print(f"[NDI] Iniciando captura da fonte: {source_name}")
+            
             # Inicializar NDI
             if not NDI.initialize():
-                print("Erro: NDI não pode ser inicializado")
+                safe_print("[NDI] Erro: NDI não pode ser inicializado")
                 return None
 
-            # Descobrir fontes NDI novamente para obter o objeto correto
+            # Descobrir fontes NDI
             ndi_find = NDI.find_create_v2()
             if not ndi_find:
-                print("Erro: Não foi possível criar NDI finder")
-                NDI.destroy()
+                safe_print("[NDI] Erro: Não foi possível criar NDI finder")
                 return None
 
             # Aguardar descoberta
-            import time
-            time.sleep(1)
+            time.sleep(1.5)
 
-            # Obter fontes
+            # Obter fontes e encontrar a alvo
             sources = NDI.find_get_current_sources(ndi_find)
             target_source = None
-
-            for source in sources:
-                if source.ndi_name == source_name:
+            
+            for source in (sources or []):
+                if getattr(source, 'ndi_name', '') == source_name:
                     target_source = source
                     break
 
+            # Limpar finder (não precisamos mais)
             NDI.find_destroy(ndi_find)
+            ndi_find = None
 
             if not target_source:
-                NDI.destroy()
+                safe_print(f"[NDI] Fonte '{source_name}' não encontrada")
                 return None
 
-            # Criar configuração do receiver
+            # Criar receiver
             recv_create = NDI.RecvCreateV3()
             recv_create.source_to_connect_to = target_source
             recv_create.color_format = NDI.RECV_COLOR_FORMAT_BGRX_BGRA
             recv_create.bandwidth = NDI.RECV_BANDWIDTH_HIGHEST
             recv_create.allow_video_fields = True
 
-            # Criar receiver para a fonte NDI
             ndi_recv = NDI.recv_create_v3(recv_create)
             if not ndi_recv:
-                print("Erro: Não foi possível criar NDI receiver")
-                NDI.destroy()
+                safe_print("[NDI] Erro: Não foi possível criar receiver")
                 return None
-            # Aguardar e capturar frame
-            timeout_seconds = 25  # Aumentado para 25 segundos
+
+            # Capturar frame com timeout reduzido (10s ao invés de 25s)
+            timeout_seconds = 10
             start_time = time.time()
-            print(f"[DEBUG] Iniciando captura NDI, timeout: {timeout_seconds}s")
+            safe_print(f"[NDI] Capturando frame, timeout: {timeout_seconds}s")
             frames_attempted = 0
+
             while (time.time() - start_time) < timeout_seconds:
                 try:
-                    # A função recv_capture_v2 retorna uma tupla
-                    result = NDI.recv_capture_v2(ndi_recv, 200)  # Aumentado timeout
+                    result = NDI.recv_capture_v2(ndi_recv, 200)
                     frame_type, video_frame, audio_frame, metadata_frame = result
                     frames_attempted += 1
-                    if frame_type == NDI.FRAME_TYPE_VIDEO:
-                        print(f"[DEBUG] Frame de vídeo recebido: {video_frame.xres}x{video_frame.yres}")
 
-                        # Verificar se os dados do frame são válidos
+                    if frame_type == NDI.FRAME_TYPE_VIDEO:
+                        # Verificar dados válidos
                         if video_frame.data is None or len(video_frame.data) == 0:
-                            print("[DEBUG] Frame sem dados, continuando...")
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
 
-                        # Converter frame NDI para numpy array
+                        # Converter frame
                         frame_data = np.frombuffer(video_frame.data, dtype=np.uint8)
-
-                        # Verificar se o tamanho dos dados é consistente
                         expected_size = video_frame.yres * video_frame.line_stride_in_bytes
+
                         if len(frame_data) < expected_size:
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
@@ -1746,59 +1834,52 @@ class ReferenceManagerWidget(QWidget):
                         frame_data = frame_data.reshape(
                             (video_frame.yres, video_frame.line_stride_in_bytes // 4, 4)
                         )
-
-                        # Converter BGRX para BGR (remover canal alpha)
-                        # Fazer cópia para garantir continuidade
                         frame_bgr = frame_data[:, :video_frame.xres, :3].copy()
 
-                        # Verificar se o frame resultante é válido
+                        # Verificar frame válido
                         if frame_bgr.size == 0:
                             NDI.recv_free_video_v2(ndi_recv, video_frame)
                             continue
 
-                        print(f"[DEBUG] Frame NDI capturado com sucesso: {frame_bgr.shape}")
-
-                        # Liberar o frame
+                        safe_print(f"[NDI] Frame capturado: {frame_bgr.shape}")
                         NDI.recv_free_video_v2(ndi_recv, video_frame)
-
-                        # Limpar recursos
-                        NDI.recv_destroy(ndi_recv)
-                        NDI.destroy()
-
                         return frame_bgr
+
                     elif frame_type == NDI.FRAME_TYPE_AUDIO:
-                        # Liberar frame de áudio (não precisamos)
                         NDI.recv_free_audio_v2(ndi_recv, audio_frame)
                     elif frame_type == NDI.FRAME_TYPE_METADATA:
-                        # Liberar metadata (não precisamos)
                         NDI.recv_free_metadata(ndi_recv, metadata_frame)
-                    # Pequena pausa para não sobrecarregar
+
                     time.sleep(0.01)
 
                 except Exception as inner_e:
-                    print(f"[DEBUG] Erro interno na captura NDI: {inner_e}")
-                    import traceback
-                    traceback.print_exc()
+                    safe_print(f"[NDI] Erro interno: {inner_e}")
                     break
 
-            # Timeout - não conseguiu capturar frame válido
-            print(f"[DEBUG] Timeout de {timeout_seconds}s atingido sem capturar frame válido")
-            print(f"[DEBUG] Total de tentativas: {frames_attempted}")
-            NDI.recv_destroy(ndi_recv)
-            NDI.destroy()
-            # Aguardar para liberar recursos NDI adequadamente
-            time.sleep(2)
+            # Timeout
+            safe_print(f"[NDI] Timeout: {frames_attempted} tentativas em {timeout_seconds}s")
             return None
 
         except Exception as e:
-            print(f"Erro ao capturar frame NDI: {e}")
+            safe_print(f"[NDI] Erro na captura: {e}")
+            return None
+
+        finally:
+            # CLEANUP GARANTIDO (resolve memory leaks)
+            if ndi_recv:
+                try:
+                    NDI.recv_destroy(ndi_recv)
+                except Exception:
+                    pass
+            if ndi_find:
+                try:
+                    NDI.find_destroy(ndi_find)
+                except Exception:
+                    pass
             try:
                 NDI.destroy()
             except Exception:
                 pass
-            # Aguardar antes de retornar para liberar recursos
-            time.sleep(1)
-            return None
 
 # REMOVIDO BLOCO if __name__ == '__main__':
 

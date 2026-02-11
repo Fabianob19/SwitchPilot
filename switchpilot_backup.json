@@ -1,0 +1,50 @@
+{
+  "window_settings": {
+    "x": 876,
+    "y": 98,
+    "width": 733,
+    "height": 870
+  },
+  "obs_settings": {
+    "host": "localhost",
+    "port": "4455",
+    "password": "ZHSb30GzqPeI4D2o"
+  },
+  "vmix_settings": {
+    "host": "localhost",
+    "port": "8088"
+  },
+  "pgm_settings": {
+    "kind": "monitor",
+    "id": 1,
+    "roi": [
+      405,
+      194,
+      399,
+      338
+    ],
+    "source_name": "Monitor 1"
+  },
+  "references": [
+    {
+      "name": "ref_01",
+      "type": "static",
+      "path": "C:\\Users\\T-Gamer\\AppData\\Local\\SwitchPilot\\references\\ref_01.png",
+      "actions": [
+        {
+          "integration": "OBS Studio",
+          "action_type": "Definir Visibilidade da Fonte",
+          "params": {
+            "scene_name_for_item": "Cena",
+            "item_name": "周末假期宿舍與韓國留學生女友瘋狂愛愛，主動騎乘無套後入衝刺內射…_伊莉影片區.mp4",
+            "visible": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "monitoring_settings": {
+    "interval": 0.5,
+    "default_threshold": 0.9
+  }
+}

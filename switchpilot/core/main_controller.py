@@ -138,6 +138,12 @@ class MainController(QObject):
         else:
             self._log_internal("Detalhes PGM ainda não definidos ou não atualizados pela UI.", "debug")
 
+    def set_pgm_details(self, pgm_details):
+        """Atualiza detalhes PGM recebidos da UI (ex: ao selecionar referência)."""
+        self.pgm_details = pgm_details
+        if self.pgm_details:
+            self._log_internal(f"PGM alterado via seleção: {self.pgm_details.get('source_name')} ROI: {self.pgm_details.get('roi')}", "info")
+
     def start_monitoring(self):
         if self.monitoring_active:
             self._log_internal("Monitoramento já está ativo.", "warning")

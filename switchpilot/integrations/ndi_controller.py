@@ -19,6 +19,252 @@ except ImportError:
     NDI_AVAILABLE = False
     NDI = None
 
+# PyQt5 imports for thread-safe operations
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+
+
+class NDIDiscoveryWorker(QThread):
+    """Worker thread para descoberta assíncrona de fontes NDI.
+    
+    Evita travar a UI durante a descoberta de fontes.
+    """
+    # Sinais emitidos pela thread
+    sources_found = pyqtSignal(list)  # Lista de fontes encontradas
+    error_occurred = pyqtSignal(str)  # Mensagem de erro
+    finished_discovery = pyqtSignal()  # Descoberta finalizada
+
+    def __init__(self, discovery_timeout: float = 2.0, parent=None):
+        super().__init__(parent)
+        self.discovery_timeout = discovery_timeout
+        self._is_running = True
+
+    def run(self):
+        """Executa descoberta de fontes NDI em thread separada."""
+        if not NDI_AVAILABLE:
+            self.error_occurred.emit("NDI não está disponível")
+            self.finished_discovery.emit()
+            return
+
+        ndi_find = None
+        try:
+            # Inicializar NDI (seguro chamar múltiplas vezes)
+            if not NDI.initialize():
+                self.error_occurred.emit("Falha ao inicializar NDI")
+                self.finished_discovery.emit()
+                return
+
+            # Criar finder
+            ndi_find = NDI.find_create_v2()
+            if not ndi_find:
+                self.error_occurred.emit("Não foi possível criar NDI finder")
+                NDI.destroy()
+                self.finished_discovery.emit()
+                return
+
+            # Aguardar descoberta (em thread separada, não trava UI)
+            time.sleep(self.discovery_timeout)
+
+            if not self._is_running:
+                return
+
+            # Obter fontes
+            sources = NDI.find_get_current_sources(ndi_find)
+            source_list = []
+
+            if sources:
+                for i, source in enumerate(sources):
+                    source_info = {
+                        'id': i,
+                        'name': getattr(source, 'ndi_name', f'Fonte NDI {i+1}'),
+                        'url': getattr(source, 'url_address', ''),
+                        'ndi_name': getattr(source, 'ndi_name', ''),
+                        'url_address': getattr(source, 'url_address', '')
+                    }
+                    source_list.append(source_info)
+
+            self.sources_found.emit(source_list)
+
+        except Exception as e:
+            self.error_occurred.emit(f"Erro na descoberta NDI: {e}")
+        finally:
+            # Limpar recursos
+            if ndi_find:
+                try:
+                    NDI.find_destroy(ndi_find)
+                except Exception:
+                    pass
+            try:
+                NDI.destroy()
+            except Exception:
+                pass
+            self.finished_discovery.emit()
+
+    def stop(self):
+        """Para a descoberta de forma segura."""
+        self._is_running = False
+
+
+class NDICaptureWorker(QThread):
+    """Worker thread para captura assíncrona de frames NDI.
+    
+    Evita travar a UI durante a captura de frames.
+    """
+    # Sinais emitidos pela thread
+    frame_captured = pyqtSignal(object)  # Frame capturado (np.ndarray ou None)
+    error_occurred = pyqtSignal(str)  # Mensagem de erro
+    progress_update = pyqtSignal(str)  # Atualização de progresso
+    finished_capture = pyqtSignal()  # Captura finalizada
+
+    def __init__(self, source_name: str, timeout_seconds: float = 10.0, parent=None):
+        super().__init__(parent)
+        self.source_name = source_name
+        self.timeout_seconds = timeout_seconds
+        self._is_running = True
+
+    def run(self):
+        """Executa captura de frame NDI em thread separada."""
+        if not NDI_AVAILABLE:
+            self.error_occurred.emit("NDI não está disponível")
+            self.finished_capture.emit()
+            return
+
+        ndi_find = None
+        ndi_recv = None
+        
+        try:
+            self.progress_update.emit("Inicializando NDI...")
+            
+            # Inicializar NDI
+            if not NDI.initialize():
+                self.error_occurred.emit("Falha ao inicializar NDI")
+                self.finished_capture.emit()
+                return
+
+            # Descobrir fontes
+            self.progress_update.emit("Descobrindo fontes NDI...")
+            ndi_find = NDI.find_create_v2()
+            if not ndi_find:
+                self.error_occurred.emit("Não foi possível criar NDI finder")
+                self.finished_capture.emit()
+                return
+
+            time.sleep(1.5)  # Tempo para descoberta
+
+            if not self._is_running:
+                return
+
+            # Encontrar fonte alvo
+            sources = NDI.find_get_current_sources(ndi_find)
+            target_source = None
+
+            for source in (sources or []):
+                if getattr(source, 'ndi_name', '') == self.source_name:
+                    target_source = source
+                    break
+
+            if not target_source:
+                self.error_occurred.emit(f"Fonte NDI '{self.source_name}' não encontrada")
+                self.finished_capture.emit()
+                return
+
+            # Limpar finder (não precisamos mais)
+            NDI.find_destroy(ndi_find)
+            ndi_find = None
+
+            # Criar receiver
+            self.progress_update.emit(f"Conectando a {self.source_name}...")
+            recv_create = NDI.RecvCreateV3()
+            recv_create.source_to_connect_to = target_source
+            recv_create.color_format = NDI.RECV_COLOR_FORMAT_BGRX_BGRA
+            recv_create.bandwidth = NDI.RECV_BANDWIDTH_HIGHEST
+            recv_create.allow_video_fields = True
+
+            ndi_recv = NDI.recv_create_v3(recv_create)
+            if not ndi_recv:
+                self.error_occurred.emit("Não foi possível criar receiver NDI")
+                self.finished_capture.emit()
+                return
+
+            # Capturar frame
+            self.progress_update.emit("Capturando frame...")
+            start_time = time.time()
+            frames_attempted = 0
+
+            while self._is_running and (time.time() - start_time) < self.timeout_seconds:
+                try:
+                    result = NDI.recv_capture_v2(ndi_recv, 200)
+                    frame_type, video_frame, audio_frame, metadata_frame = result
+                    frames_attempted += 1
+
+                    if frame_type == NDI.FRAME_TYPE_VIDEO:
+                        # Verificar dados válidos
+                        if video_frame.data is None or len(video_frame.data) == 0:
+                            NDI.recv_free_video_v2(ndi_recv, video_frame)
+                            continue
+
+                        # Converter frame
+                        frame_data = np.frombuffer(video_frame.data, dtype=np.uint8)
+                        expected_size = video_frame.yres * video_frame.line_stride_in_bytes
+
+                        if len(frame_data) < expected_size:
+                            NDI.recv_free_video_v2(ndi_recv, video_frame)
+                            continue
+
+                        frame_data = frame_data.reshape(
+                            (video_frame.yres, video_frame.line_stride_in_bytes // 4, 4)
+                        )
+                        frame_bgr = frame_data[:, :video_frame.xres, :3].copy()
+
+                        if frame_bgr.size == 0:
+                            NDI.recv_free_video_v2(ndi_recv, video_frame)
+                            continue
+
+                        # Liberar e emitir
+                        NDI.recv_free_video_v2(ndi_recv, video_frame)
+                        self.frame_captured.emit(frame_bgr)
+                        self.finished_capture.emit()
+                        return
+
+                    elif frame_type == NDI.FRAME_TYPE_AUDIO:
+                        NDI.recv_free_audio_v2(ndi_recv, audio_frame)
+                    elif frame_type == NDI.FRAME_TYPE_METADATA:
+                        NDI.recv_free_metadata(ndi_recv, metadata_frame)
+
+                    time.sleep(0.01)
+
+                except Exception as inner_e:
+                    self.error_occurred.emit(f"Erro na captura: {inner_e}")
+                    break
+
+            # Timeout
+            self.error_occurred.emit(f"Timeout: {frames_attempted} tentativas em {self.timeout_seconds}s")
+            self.frame_captured.emit(None)
+
+        except Exception as e:
+            self.error_occurred.emit(f"Erro geral na captura NDI: {e}")
+            self.frame_captured.emit(None)
+        finally:
+            # Limpar recursos de forma segura
+            if ndi_recv:
+                try:
+                    NDI.recv_destroy(ndi_recv)
+                except Exception:
+                    pass
+            if ndi_find:
+                try:
+                    NDI.find_destroy(ndi_find)
+                except Exception:
+                    pass
+            try:
+                NDI.destroy()
+            except Exception:
+                pass
+            self.finished_capture.emit()
+
+    def stop(self):
+        """Para a captura de forma segura."""
+        self._is_running = False
+
 
 class NDIController:
     """Controlador para captura de fontes NDI"""

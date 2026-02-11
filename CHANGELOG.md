@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-02-10
+### Fixed
+- **Persistence**: Fixed an issue where PGM Region details were lost after application restart.
+- **UI Overlay**: Capture Area Overlay (F11) now correctly updates its position when selecting different references.
+- **Auto-Save**: References and PGM details are now saved immediately upon modification to prevent data loss on crash.
+
 ## [1.6.1] - 2026-02-05
 ### Fixed
 - **Detection**: Runtime NCC Fallback for dynamic textures (noise/static/particles).

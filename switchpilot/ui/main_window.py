@@ -2,6 +2,7 @@ import sys
 import os  # Adicionado para construir caminhos de tema
 import json
 import shutil
+import traceback
 import ctypes
 from ctypes import wintypes
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QDockWidget, QWidget,
@@ -17,6 +18,7 @@ from switchpilot.ui.widgets.threshold_config_dialog import ThresholdConfigDialog
 from switchpilot.ui.widgets.help_center import HelpCenterDialog
 from switchpilot.ui.themes import THEME_LIGHT, THEME_DARK_DEFAULT, THEME_VERY_DARK
 from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
+from switchpilot.core.config_manager import ConfigManager
 
 # Configurações padrão da janela
 DEFAULT_WINDOW_WIDTH = 1200
@@ -130,12 +132,17 @@ class MainWindow(QMainWindow):
             title += f" - {self._version}"
         self.setWindowTitle(title)
 
+        # Criar ConfigManager (centraliza persistência)
+        self.config_manager = ConfigManager()
+        self.config_manager.load()
+
         # Carregar configurações da janela
         self._load_window_settings()
 
         self.setWindowIcon(QIcon(resource_path('ICONE.ico')))  # Ícone da Janela
 
         self._is_quitting_via_tray = False  # Flag para controlar o fechamento real
+        self._loading_settings = False  # Flag para evitar auto-save durante carregamento
 
         # Carregar tema padrão inicial (ou o último salvo no futuro)
         self.current_theme_name = THEME_VERY_DARK
@@ -143,71 +150,195 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._create_tray_icon()  # Configurar o ícone da bandeja
 
+        # Restaurar configurações salvas nos widgets
+        self._load_all_settings()
+
         # Ativar barra de título escura (Windows 10/11)
         enable_dark_title_bar_for_window(self)
 
     def _load_window_settings(self):
-        """Carrega as configurações salvas da janela ou usa valores padrão"""
+        """Carrega as configurações salvas da janela (via ConfigManager) ou usa valores padrão"""
         try:
-            config_path = "switchpilot_config.json"
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
+            window_config = self.config_manager.get_window_settings()
+            x = window_config.get('x', DEFAULT_WINDOW_X)
+            y = window_config.get('y', DEFAULT_WINDOW_Y)
+            width = window_config.get('width', DEFAULT_WINDOW_WIDTH)
+            height = window_config.get('height', DEFAULT_WINDOW_HEIGHT)
 
-                window_config = config.get('window_settings', {})
-                x = window_config.get('x', DEFAULT_WINDOW_X)
-                y = window_config.get('y', DEFAULT_WINDOW_Y)
-                width = window_config.get('width', DEFAULT_WINDOW_WIDTH)
-                height = window_config.get('height', DEFAULT_WINDOW_HEIGHT)
+            # Validar valores para evitar janela fora da tela
+            if width < 400:
+                width = DEFAULT_WINDOW_WIDTH
+            if height < 300:
+                height = DEFAULT_WINDOW_HEIGHT
+            if x < 0:
+                x = DEFAULT_WINDOW_X
+            if y < 0:
+                y = DEFAULT_WINDOW_Y
 
-                # Validar valores para evitar janela fora da tela
-                if width < 400:
-                    width = DEFAULT_WINDOW_WIDTH
-                if height < 300:
-                    height = DEFAULT_WINDOW_HEIGHT
-                if x < 0:
-                    x = DEFAULT_WINDOW_X
-                if y < 0:
-                    y = DEFAULT_WINDOW_Y
-
-                self.setGeometry(x, y, width, height)
-                print(f"Configurações da janela carregadas: {width}x{height} na posição ({x}, {y})")
-            else:
-                # Primeira execução - usar tamanho otimizado
-                self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
-                print(f"Primeira execução - usando tamanho padrão: {DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}")
+            self.setGeometry(x, y, width, height)
+            print(f"Configurações da janela carregadas: {width}x{height} na posição ({x}, {y})")
         except Exception as e:
             print(f"Erro ao carregar configurações da janela: {e}")
-            # Fallback para tamanho padrão
             self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
 
     def _save_window_settings(self):
-        """Salva as configurações atuais da janela"""
+        """Salva as configurações atuais da janela (via ConfigManager)"""
         try:
-            config_path = "switchpilot_config.json"
-            config = {}
-
-            # Carregar configurações existentes
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-
-            # Atualizar configurações da janela
             geometry = self.geometry()
-            config['window_settings'] = {
-                'x': geometry.x(),
-                'y': geometry.y(),
-                'width': geometry.width(),
-                'height': geometry.height()
-            }
-
-            # Salvar de volta
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-
+            self.config_manager.set_window_settings(
+                geometry.x(), geometry.y(), geometry.width(), geometry.height()
+            )
+            self.config_manager.save()
             print(f"Configurações da janela salvas: {geometry.width()}x{geometry.height()} na posição ({geometry.x()}, {geometry.y()})")
         except Exception as e:
             print(f"Erro ao salvar configurações da janela: {e}")
+
+    def _save_all_settings(self):
+        """Salva TODAS as configurações da aplicação no ConfigManager."""
+        try:
+            # 1. Janela
+            geometry = self.geometry()
+            self.config_manager.set_window_settings(
+                geometry.x(), geometry.y(), geometry.width(), geometry.height()
+            )
+
+            # 2. OBS
+            if hasattr(self, 'obs_config_widget') and self.obs_config_widget:
+                obs_config = self.obs_config_widget.get_config()
+                self.config_manager.set_obs_settings(
+                    obs_config.get('host', 'localhost'),
+                    obs_config.get('port', '4455'),
+                    obs_config.get('password', '')
+                )
+
+            # 3. vMix
+            if hasattr(self, 'vmix_config_widget') and self.vmix_config_widget:
+                vmix_config = self.vmix_config_widget.get_config()
+                self.config_manager.set_vmix_settings(
+                    vmix_config.get('host', 'localhost'),
+                    vmix_config.get('port', '8088')
+                )
+
+            # 4. PGM (fonte de captura e região)
+            if hasattr(self, 'reference_manager_widget') and self.reference_manager_widget:
+                rmw = self.reference_manager_widget
+                pgm = rmw.selected_pgm_details or {}
+                if pgm and pgm.get('roi'):
+                    pgm_settings = {
+                        'kind': pgm.get('kind', 'monitor'),
+                        'id': pgm.get('id', 0),
+                        'roi': list(pgm.get('roi', [])),
+                        'source_name': pgm.get('source_name', '')
+                    }
+                    self.config_manager.set('pgm_settings', pgm_settings)
+                    print(f"[ConfigManager] PGM salvo: {pgm_settings.get('source_name')} ROI={pgm_settings.get('roi')}")
+
+            # 5. Referências (metadados + ações — imagens ficam no disco)
+            if hasattr(self, 'reference_manager_widget') and self.reference_manager_widget:
+                rmw = self.reference_manager_widget
+                refs = rmw.get_all_references_data()
+                self.config_manager.set_references(refs)
+
+                # Também salvar imagens no disco
+                try:
+                    rmw.save_references_to_disk()
+                except Exception as e:
+                    print(f"[ConfigManager] Erro ao salvar imagens: {e}")
+
+            # 6. Salvar tudo no arquivo
+            self.config_manager.save()
+            print("[ConfigManager] Todas as configurações salvas com sucesso.")
+
+        except Exception as e:
+            print(f"[ConfigManager] Erro ao salvar configurações: {e}")
+            traceback.print_exc()
+
+    def _load_all_settings(self):
+        """Restaura TODAS as configurações salvas nos widgets."""
+        self._loading_settings = True  # Bloquear auto-save durante carregamento
+        try:
+            config = self.config_manager._config
+
+            # 1. OBS
+            if hasattr(self, 'obs_config_widget') and self.obs_config_widget:
+                obs_settings = self.config_manager.get_obs_settings()
+                self.obs_config_widget.set_config(obs_settings)
+                print(f"[ConfigManager] OBS restaurado: {obs_settings.get('host')}:{obs_settings.get('port')}")
+
+            # 2. vMix
+            if hasattr(self, 'vmix_config_widget') and self.vmix_config_widget:
+                vmix_settings = self.config_manager.get_vmix_settings()
+                self.vmix_config_widget.set_config(vmix_settings)
+                print(f"[ConfigManager] vMix restaurado: {vmix_settings.get('host')}:{vmix_settings.get('port')}")
+
+            # 3. PGM (restaurar região de captura)
+            if hasattr(self, 'reference_manager_widget') and self.reference_manager_widget:
+                rmw = self.reference_manager_widget
+                pgm_settings = self.config_manager.get('pgm_settings')
+                if pgm_settings:
+                    # Suportar formato novo (roi) e legado (region)
+                    roi = pgm_settings.get('roi') or pgm_settings.get('region')
+                    if roi and isinstance(roi, (list, tuple)) and len(roi) == 4:
+                        # Determinar kind: formato novo usa 'kind', legado usa 'source_type'
+                        kind = pgm_settings.get('kind')
+                        if not kind:
+                            st = pgm_settings.get('source_type', 'Monitor').lower()
+                            kind = 'monitor' if 'monitor' in st else 'window' if 'window' in st else 'monitor'
+                        
+                        # Determinar id: formato novo usa 'id', legado usa 'monitor_index'
+                        source_id = pgm_settings.get('id')
+                        if source_id is None:
+                            source_id = pgm_settings.get('monitor_index', 0)
+                        
+                        source_name = pgm_settings.get('source_name', f"Monitor {source_id}")
+                        
+                        rmw.selected_pgm_details = {
+                            'kind': kind,
+                            'id': source_id,
+                            'roi': tuple(roi),
+                            'source_name': source_name
+                        }
+                        # Atualizar label na UI
+                        if hasattr(rmw, 'pgm_region_label'):
+                            rmw.pgm_region_label.setText(
+                                f"Região PGM: ({roi[0]},{roi[1]},{roi[2]},{roi[3]}) em {source_name}"
+                            )
+                            rmw.pgm_region_label.setStyleSheet("color: #a3be8c;")
+                        print(f"[ConfigManager] PGM restaurado: {source_name} ROI={list(roi)}")
+
+            # 4. Referências (carregar imagens do disco + metadados do config)
+            if hasattr(self, 'reference_manager_widget') and self.reference_manager_widget:
+                rmw = self.reference_manager_widget
+                
+                # Primeiro carregar imagens do disco
+                loaded = rmw.load_references_from_disk()
+                
+                # Depois aplicar ações/configs salvos no JSON
+                saved_refs = self.config_manager.get_references()
+                if saved_refs:
+                    for saved_ref in saved_refs:
+                        # Encontrar referência correspondente e aplicar metadados
+                        for ref in rmw.references_data:
+                            if ref.get('name') == saved_ref.get('name'):
+                                if saved_ref.get('actions'):
+                                    ref['actions'] = saved_ref['actions']
+                                if saved_ref.get('pgm_details'):
+                                    ref['pgm_details'] = saved_ref['pgm_details']
+                                break
+                    
+                    # Emitir atualização se houve mudanças
+                    if rmw.references_data:
+                        rmw.references_updated.emit(rmw.get_all_references_data())
+
+                print(f"[ConfigManager] {loaded} referência(s) restaurada(s)")
+
+            print("[ConfigManager] Todas as configurações restauradas.")
+
+        except Exception as e:
+            print(f"[ConfigManager] Erro ao restaurar configurações: {e}")
+            traceback.print_exc()
+        finally:
+            self._loading_settings = False  # Liberar auto-save
 
     def _create_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -277,10 +408,9 @@ class MainWindow(QMainWindow):
                     print("Parando monitoramento antes de sair...")
                     self.main_controller.stop_monitoring_if_running()
 
-            # Salvar configurações da janela antes de sair
-            self._save_window_settings()
+            # Salvar TODAS as configurações antes de sair
+            self._save_all_settings()
 
-            # Salvar configurações, etc.
             print("Saindo da aplicação...")
             super().closeEvent(event)
         else:
@@ -657,6 +787,58 @@ class MainWindow(QMainWindow):
         if hasattr(self.monitoring_control_widget, 'set_main_controller'):
             self.monitoring_control_widget.set_main_controller(main_controller)
 
+        # Auto-salvar referências sempre que mudarem (add/remove)
+        if hasattr(self.reference_manager_widget, 'references_updated'):
+            self.reference_manager_widget.references_updated.connect(self._on_references_changed)
+
+        # Conectar mudança de seleção PGM para atualizar overlay
+        if hasattr(self.reference_manager_widget, 'pgm_selection_changed'):
+            self.reference_manager_widget.pgm_selection_changed.connect(self._on_pgm_selection_changed)
+
+    def _on_references_changed(self, references_list):
+        """Salva referências automaticamente quando mudam (add/remove)."""
+        print(f"[DEBUG AUTO-SAVE] _on_references_changed chamado! loading={self._loading_settings}, refs={len(references_list) if references_list else 0}")
+        if self._loading_settings:
+            print("[DEBUG AUTO-SAVE] Ignorado — carregamento em andamento")
+            return
+        try:
+            rmw = self.reference_manager_widget
+            # 1. Salvar imagens no disco imediatamente
+            saved = rmw.save_references_to_disk()
+            # 2. Pegar dados FRESCOS do widget (com paths atualizados pelo save)
+            fresh_refs = rmw.get_all_references_data()
+            # 3. Salvar metadados (ações, paths, etc) no config
+            self.config_manager.set_references(fresh_refs)
+
+            # 4. Salvar PGM também (região de captura)
+            pgm = rmw.selected_pgm_details or {}
+            if pgm and pgm.get('roi'):
+                pgm_settings = {
+                    'kind': pgm.get('kind', 'monitor'),
+                    'id': pgm.get('id', 0),
+                    'roi': list(pgm.get('roi', [])),
+                    'source_name': pgm.get('source_name', '')
+                }
+                self.config_manager.set('pgm_settings', pgm_settings)
+
+            self.config_manager.save()
+            print(f"[ConfigManager] Auto-save: {len(fresh_refs)} referência(s), {saved} salva(s) no disco")
+        except Exception as e:
+            print(f"[ConfigManager] Erro no auto-save de referências: {e}")
+            traceback.print_exc()
+
+    def _on_pgm_selection_changed(self, pgm_details):
+        """Atualiza Controller e Overlay quando a seleção de PGM muda na lista."""
+        if self.main_controller:
+            # Atualiza no controller (para monitoramento)
+            self.main_controller.set_pgm_details(pgm_details)
+            
+            # Atualizar overlay se estiver ativo (para visualização)
+            if self.show_capture_area_action.isChecked():
+                 # Fechar e reabrir força overlay a ler nova geometria do controller
+                 self._toggle_capture_area_overlay(False)
+                 self._toggle_capture_area_overlay(True)
+
     def _open_thresholds_dialog(self):
         # Pega os valores atuais do MainController se possível
         static_val = 0.90
@@ -707,33 +889,68 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Restaurar Layout", "Estado padrão do layout não disponível nesta sessão.")
 
     def _import_config(self):
-        src, _ = QFileDialog.getOpenFileName(self, "Importar Configurações", "", "JSON (*.json)")
+        src, _ = QFileDialog.getOpenFileName(
+            self, "Importar Configurações", "",
+            "Pacote SwitchPilot (*.zip);;JSON (*.json);;Todos (*)"
+        )
         if not src:
             return
         try:
-            shutil.copyfile(src, "switchpilot_config.json")
-            QMessageBox.information(self, "Importar Configurações", "Configurações importadas com sucesso. Algumas alterações podem exigir reiniciar.")
+            refs_dir = self.reference_manager_widget.references_dir if hasattr(self.reference_manager_widget, 'references_dir') else ''
+
+            if src.lower().endswith('.zip'):
+                # Importar .zip completo (config + referências)
+                success = self.config_manager.import_from_zip(src, refs_dir)
+            else:
+                # Importar JSON simples (compatibilidade legada)
+                success = self.config_manager.import_from_json(src)
+
+            if success:
+                # Recarregar configurações nos widgets
+                self._load_all_settings()
+                QMessageBox.information(
+                    self, "Importar Configurações",
+                    "Configurações importadas com sucesso!\n"
+                    "Todas as configurações foram restauradas."
+                )
+            else:
+                QMessageBox.warning(self, "Importar Configurações", "Falha ao importar arquivo.")
         except Exception as e:
             QMessageBox.critical(self, "Importar Configurações", f"Falha ao importar: {e}")
 
     def _export_config(self):
-        dst, _ = QFileDialog.getSaveFileName(self, "Exportar Configurações", "switchpilot_config.json", "JSON (*.json)")
+        dst, selected_filter = QFileDialog.getSaveFileName(
+            self, "Exportar Configurações", "switchpilot_backup.zip",
+            "Pacote SwitchPilot (*.zip);;JSON (*.json)"
+        )
         if not dst:
             return
         try:
-            if os.path.exists("switchpilot_config.json"):
-                shutil.copyfile("switchpilot_config.json", dst)
+            # Salvar estado atual antes de exportar
+            self._save_all_settings()
+
+            refs_dir = self.reference_manager_widget.references_dir if hasattr(self.reference_manager_widget, 'references_dir') else ''
+
+            if dst.lower().endswith('.zip'):
+                # Exportar .zip completo (config + referências)
+                success = self.config_manager.export_to_zip(dst, refs_dir)
             else:
-                # Se não existir, cria um mínimo com janela atual
-                geometry = self.geometry()
-                config = {
-                    'window_settings': {
-                        'x': geometry.x(), 'y': geometry.y(), 'width': geometry.width(), 'height': geometry.height()
-                    }
-                }
-                with open(dst, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, indent=2, ensure_ascii=False)
-            QMessageBox.information(self, "Exportar Configurações", "Arquivo exportado com sucesso.")
+                # Exportar JSON simples
+                self.config_manager.save()
+                config_path = self.config_manager._config_path
+                if os.path.exists(config_path):
+                    shutil.copyfile(config_path, dst)
+                    success = True
+                else:
+                    success = False
+
+            if success:
+                QMessageBox.information(
+                    self, "Exportar Configurações",
+                    "Configurações exportadas com sucesso!"
+                )
+            else:
+                QMessageBox.warning(self, "Exportar Configurações", "Falha ao exportar.")
         except Exception as e:
             QMessageBox.critical(self, "Exportar Configurações", f"Falha ao exportar: {e}")
 
