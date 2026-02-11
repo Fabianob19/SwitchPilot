@@ -206,7 +206,8 @@ class MainWindow(QMainWindow):
 
     def _on_vmix_config_changed(self, config):
         """Atualiza ConfigManager com novas configurações do vMix."""
-        if self._loading_settings: return
+        if self._loading_settings:
+            return
         self.config_manager.set_vmix_settings(
             config.get('host', 'localhost'),
             config.get('port', '8088')
