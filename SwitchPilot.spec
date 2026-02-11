@@ -6,7 +6,13 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('ICONE.ico', '.'), ('switchpilot/ui/themes', 'switchpilot/ui/themes'), ('switchpilot/references', 'switchpilot/references'), ('docs/help', 'docs/help'), ('VERSION', '.')],
+    datas=[
+        (os.path.abspath('ICONE.ico'), '.'),
+        (os.path.abspath('switchpilot/ui/themes'), 'switchpilot/ui/themes'),
+        (os.path.abspath('switchpilot/references'), 'switchpilot/references'),
+        (os.path.abspath('docs/help'), 'docs/help'),
+        (os.path.abspath('VERSION'), '.')
+    ],
     hiddenimports=['PyQt5', 'cv2', 'mss', 'numpy', 'websocket', 'markdown'],
     hookspath=[],
     hooksconfig={},
@@ -33,8 +39,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['ICONE.ico'],
-    version='version_info.txt',  # Adicionar informações de versão
+    icon=[os.path.abspath('ICONE.ico')],
+    version=os.path.abspath('version_info.txt'),  # Adicionar informações de versão
     manifest=os.path.abspath('switchpilot.manifest'),  # Adicionar manifest do Windows
 )
 coll = COLLECT(
