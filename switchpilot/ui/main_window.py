@@ -284,14 +284,14 @@ class MainWindow(QMainWindow):
                         if not kind:
                             st = pgm_settings.get('source_type', 'Monitor').lower()
                             kind = 'monitor' if 'monitor' in st else 'window' if 'window' in st else 'monitor'
-                        
+
                         # Determinar id: formato novo usa 'id', legado usa 'monitor_index'
                         source_id = pgm_settings.get('id')
                         if source_id is None:
                             source_id = pgm_settings.get('monitor_index', 0)
-                        
+
                         source_name = pgm_settings.get('source_name', f"Monitor {source_id}")
-                        
+
                         rmw.selected_pgm_details = {
                             'kind': kind,
                             'id': source_id,
@@ -309,10 +309,10 @@ class MainWindow(QMainWindow):
             # 4. Referências (carregar imagens do disco + metadados do config)
             if hasattr(self, 'reference_manager_widget') and self.reference_manager_widget:
                 rmw = self.reference_manager_widget
-                
+
                 # Primeiro carregar imagens do disco
                 loaded = rmw.load_references_from_disk()
-                
+
                 # Depois aplicar ações/configs salvos no JSON
                 saved_refs = self.config_manager.get_references()
                 if saved_refs:
@@ -325,7 +325,7 @@ class MainWindow(QMainWindow):
                                 if saved_ref.get('pgm_details'):
                                     ref['pgm_details'] = saved_ref['pgm_details']
                                 break
-                    
+
                     # Emitir atualização se houve mudanças
                     if rmw.references_data:
                         rmw.references_updated.emit(rmw.get_all_references_data())
@@ -832,12 +832,12 @@ class MainWindow(QMainWindow):
         if self.main_controller:
             # Atualiza no controller (para monitoramento)
             self.main_controller.set_pgm_details(pgm_details)
-            
+
             # Atualizar overlay se estiver ativo (para visualização)
             if self.show_capture_area_action.isChecked():
-                 # Fechar e reabrir força overlay a ler nova geometria do controller
-                 self._toggle_capture_area_overlay(False)
-                 self._toggle_capture_area_overlay(True)
+                # Fechar e reabrir força overlay a ler nova geometria do controller
+                self._toggle_capture_area_overlay(False)
+                self._toggle_capture_area_overlay(True)
 
     def _open_thresholds_dialog(self):
         # Pega os valores atuais do MainController se possível
@@ -1059,6 +1059,7 @@ class MainWindow(QMainWindow):
         """Abre a Central de Ajuda Unificada."""
         dlg = HelpCenterDialog(self, initial_topic=initial_topic)
         dlg.exec_()
+
     def _show_changelog(self):
         path = resource_path('CHANGELOG.md') if os.path.exists('CHANGELOG.md') else None
         if not path:
@@ -1123,7 +1124,7 @@ class MainWindow(QMainWindow):
                 # Comparar versões
                 current_ver = current_version.replace('v', '')
                 latest_ver = latest_version.replace('v', '')
-                
+
                 if latest_ver > current_ver:
                     update_status = "🎉 NOVA VERSÃO DISPONÍVEL!"
                     update_msg = f"Versão {latest_version} está disponível para download!"
@@ -1212,7 +1213,6 @@ class MainWindow(QMainWindow):
                 "Verifique manualmente em:\n"
                 "https://github.com/Fabianob19/SwitchPilot/releases"
             )
-
 
     def _show_about(self):
         """Sobre o SwitchPilot com agradecimentos"""

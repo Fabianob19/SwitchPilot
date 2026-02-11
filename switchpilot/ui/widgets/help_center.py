@@ -1,7 +1,6 @@
-import os
 import markdown
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QListWidget, QTextBrowser, 
+    QDialog, QVBoxLayout, QListWidget, QTextBrowser,
     QDialogButtonBox, QSplitter
 )
 from PyQt5.QtCore import Qt

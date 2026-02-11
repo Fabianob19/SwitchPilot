@@ -49,6 +49,7 @@ except ImportError:
 
 from .action_config_dialog import ActionConfigDialog  # Adicionada importação
 
+
 def get_user_references_dir():
     r"""
     Retorna o diretório de referências do usuário.
@@ -67,6 +68,7 @@ def get_user_references_dir():
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
 
+
 def safe_print(message):
     """Imprime sem quebrar o app quando o console não suporta caracteres.
 
@@ -82,6 +84,7 @@ def safe_print(message):
             print(text)
         except Exception:
             pass
+
 
 class ReferenceManagerWidget(QWidget):
     """Widget para gerenciar as imagens de referência para monitoramento."""
