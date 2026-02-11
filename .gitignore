@@ -52,6 +52,7 @@ run_*.out
 switchpilot_config.json
 *.pkl
 *.json.backup
+switchpilot_backup.json
 
 # === IDEs e Editores ===
 .vscode/
