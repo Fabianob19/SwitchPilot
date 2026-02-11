@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         # Criar ConfigManager (centraliza persistência)
         self.config_manager = ConfigManager()
         self.config_manager.load()
+        self._init_autosave_timer()
 
         # Carregar configurações da janela
         self._load_window_settings()
@@ -180,6 +181,36 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Erro ao carregar configurações da janela: {e}")
             self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+
+    def _init_autosave_timer(self):
+        """Inicializa timer para auto-save de configurações."""
+        self._config_autosave_timer = QTimer(self)
+        self._config_autosave_timer.setSingleShot(True)
+        self._config_autosave_timer.timeout.connect(self._save_pending_configs)
+
+    def _save_pending_configs(self):
+        """Salva configurações pendentes no disco."""
+        if self.config_manager.has_unsaved_changes:
+            self.config_manager.save()
+
+    def _on_obs_config_changed(self, config):
+        """Atualiza ConfigManager com novas configurações do OBS."""
+        if self._loading_settings: return
+        self.config_manager.set_obs_settings(
+            config.get('host', 'localhost'),
+            config.get('port', '4455'),
+            config.get('password', '')
+        )
+        self._config_autosave_timer.start(1000)  # Agendar save em 1s
+
+    def _on_vmix_config_changed(self, config):
+        """Atualiza ConfigManager com novas configurações do vMix."""
+        if self._loading_settings: return
+        self.config_manager.set_vmix_settings(
+            config.get('host', 'localhost'),
+            config.get('port', '8088')
+        )
+        self._config_autosave_timer.start(1000)  # Agendar save em 1s
 
     def _save_window_settings(self):
         """Salva as configurações atuais da janela (via ConfigManager)"""
@@ -639,6 +670,7 @@ class MainWindow(QMainWindow):
         obs_config_dock = QDockWidget("Configuração OBS", self)
         obs_config_dock.setObjectName("obsConfigDock")
         self.obs_config_widget = OBSConfigWidget()
+        self.obs_config_widget.config_changed.connect(self._on_obs_config_changed)
         obs_config_dock.setWidget(self.obs_config_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, obs_config_dock)
         view_menu.addAction(obs_config_dock.toggleViewAction())
@@ -646,6 +678,7 @@ class MainWindow(QMainWindow):
         vmix_config_dock = QDockWidget("Configuração vMix", self)
         vmix_config_dock.setObjectName("vmixConfigDock")
         self.vmix_config_widget = VMixConfigWidget()
+        self.vmix_config_widget.config_changed.connect(self._on_vmix_config_changed)
         vmix_config_dock.setWidget(self.vmix_config_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, vmix_config_dock)
         view_menu.addAction(vmix_config_dock.toggleViewAction())

@@ -14,6 +14,7 @@ AppId={{A5B8C3D4-E6F7-4A8B-9C0D-1E2F3A4B5C6D}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
+VersionInfoVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
@@ -50,7 +51,7 @@ Name: "quicklaunchicon"; Description: "Criar Ã­cone na Barra de Tarefas"; Grou
 
 [Files]
 ; Arquivos principais (toda a pasta release_v1.5.2)
-Source: "release_v{#MyAppVersion}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\SwitchPilot\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Ãcone do aplicativo (garantir que seja copiado)
 Source: "{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Arquivos de documentaÃ§Ã£o
