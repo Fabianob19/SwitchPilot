@@ -2,7 +2,7 @@
 ; Gera um instalador .exe profissional para Windows
 
 #define MyAppName "SwitchPilot"
-#define MyAppVersion "1.6.1"
+#define MyAppVersion "1.6.2"
 #define MyAppPublisher "Fabianob19"
 #define MyAppURL "https://github.com/Fabianob19/SwitchPilot"
 #define MyAppExeName "SwitchPilot.exe"
