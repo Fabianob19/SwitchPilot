@@ -32,7 +32,9 @@ ignore =
     E501,
     F541,
     E702,
-    E704
+    E704,
+    W291,
+    W293
 
 # Configurações por arquivo
 # __init__.py: F401=imports não usados, F403=wildcard imports
@@ -45,9 +47,12 @@ ignore =
 # monitoring_control_widget.py: F401=imports não usados, F821=QTextEdit usado dinamicamente, F811=reimport intencional
 per-file-ignores =
     __init__.py:F401,F403
-    main.py:E402
+    main.py:E402,F401
+    rthook_onnx_preload.py:C901
     switchpilot/core/main_controller.py:F401,C901
-    switchpilot/core/monitor_thread.py:F401,C901
+    switchpilot/core/monitor_thread.py:F401,C901,F841
+    switchpilot/core/nsfw_detector.py:C901,F841
+    switchpilot/core/nsfw_worker.py:C901
     switchpilot/integrations/*_controller.py:F401,C901
     switchpilot/ui/main_window.py:F401,F811,F841,C901
     switchpilot/ui/widgets/reference_manager.py:C901

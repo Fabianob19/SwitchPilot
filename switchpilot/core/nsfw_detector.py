@@ -22,6 +22,7 @@ import json
 import base64
 import atexit
 
+
 class NSFWDetector:
 
     LABELS = [
@@ -113,7 +114,6 @@ class NSFWDetector:
                     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                     creationflags = subprocess.CREATE_NO_WINDOW
 
-
                 if getattr(sys, 'frozen', False):
                     worker_cmd = [sys.executable, "--nsfw-worker"]
                 else:
@@ -176,6 +176,7 @@ class NSFWDetector:
             return {}
 
         result = [None]
+
         def _read():
             try:
                 for line in iter(self.worker_process.stdout.readline, ""):

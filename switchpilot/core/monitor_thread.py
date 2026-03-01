@@ -99,7 +99,6 @@ class MonitorThread(QThread):
             state = "ativada" if enabled else "desativada"
             self.log_signal.emit(f"[NSFW] Detecção {state} ao vivo", "info")
 
-
     def set_static_threshold(self, threshold):
         if 0.0 <= threshold <= 1.0:
             self.similarity_threshold_static = threshold
@@ -319,8 +318,6 @@ class MonitorThread(QThread):
             self.log_signal.emit("❌ Nenhuma referência válida. Monitoramento cancelado.", "error")
             self.status_signal.emit("Monitoramento Parado")
             return  # Sair imediatamente
-
-
 
         buffer_pgm = []
         # Detalhes da captura PGM
