@@ -124,7 +124,7 @@ def run_worker():
                     mat_pad = img_rgb
 
                 blob = cv2.dnn.blobFromImage(
-                    mat_pad, 1/255.0, (resolution, resolution),
+                    mat_pad, 1 / 255.0, (resolution, resolution),
                     (0, 0, 0), swapRB=False, crop=False
                 )
 
@@ -143,8 +143,8 @@ def run_worker():
                         class_id = np.argmax(class_scores)
                         cx, cy, bw, bh = data[i][0:4]
 
-                        x = (cx - bw/2) * (w + x_pad) / resolution
-                        y = (cy - bh/2) * (h + y_pad) / resolution
+                        x = (cx - bw / 2) * (w + x_pad) / resolution
+                        y = (cy - bh / 2) * (h + y_pad) / resolution
                         bw = bw * (w + x_pad) / resolution
                         bh = bh * (h + y_pad) / resolution
 
@@ -172,6 +172,7 @@ def run_worker():
         except Exception as e:
             import traceback
             print(json.dumps({"ok": False, "error": repr(e), "trace": traceback.format_exc()}), flush=True)
+
 
 if __name__ == "__main__":
     run_worker()

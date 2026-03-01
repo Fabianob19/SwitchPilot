@@ -7,14 +7,19 @@ _nudenet_dir = os.path.dirname(importlib.import_module('nudenet').__file__)
 
 from PyInstaller.utils.hooks import collect_all
 
+_model_640m = os.path.join(_nudenet_dir, '640m.onnx')
+
 datas = [
     (os.path.abspath('ICONE.ico'), '.'),
     (os.path.abspath('switchpilot/ui/themes'), 'switchpilot/ui/themes'),
     (os.path.abspath('switchpilot/references'), 'switchpilot/references'),
     (os.path.abspath('docs/help'), 'docs/help'),
     (os.path.abspath('VERSION'), '.'),
-    (os.path.join(_nudenet_dir, '640m.onnx'), 'nudenet'),
 ]
+
+# Only include model if available (CI may not have it)
+if os.path.isfile(_model_640m):
+    datas.append((_model_640m, 'nudenet'))
 
 binaries = [
     ('C:\\Windows\\System32\\vcomp140.dll', '.'),

@@ -82,7 +82,7 @@ class NSFWDetector:
             # 2. Caminho Local do Desenvolvimento Relativo à Raiz
             project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
             search_paths.append(os.path.join(project_root, 'nudenet', '640m.onnx'))
-            
+
             # 3. Fallbacks globais da VENV ou outras instalações
             try:
                 import importlib.util
@@ -97,9 +97,10 @@ class NSFWDetector:
                 if os.path.exists(p):
                     model_path = p
                     break
-                    
+
             if not model_path:
-                if self.log_callback: self.log_callback(f"[NSFWDetector v11] ERRO: 640m.onnx não encontrado! Buscou em: {search_paths}", "error")
+                if self.log_callback:
+                    self.log_callback(f"[NSFWDetector v11] ERRO: 640m.onnx não encontrado! Buscou em: {search_paths}", "error")
                 return False
 
             # Launch Isolated Subprocess Worker
@@ -112,7 +113,7 @@ class NSFWDetector:
                     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                     creationflags = subprocess.CREATE_NO_WINDOW
 
-                
+
                 if getattr(sys, 'frozen', False):
                     worker_cmd = [sys.executable, "--nsfw-worker"]
                 else:
@@ -146,19 +147,21 @@ class NSFWDetector:
                 self.enabled = True
                 active = resp.get("providers", [])[0] if resp.get("providers") else "Unknown"
                 hw = "GPU (CUDA)" if "CUDA" in active else ("GPU (DirectML)" if "Dml" in active else f"CPU ({active})")
-                if self.log_callback: self.log_callback(f"[NSFWDetector v11] 640m Medium | {hw} | {model_path} [Subprocess Mode]", "success")
+                if self.log_callback:
+                    self.log_callback(f"[NSFWDetector v11] 640m Medium | {hw} | {model_path} [Subprocess Mode]", "success")
                 return True
-                
+
             except Exception as ex:
                 self.enabled = False
-                if self.log_callback: 
+                if self.log_callback:
                     import traceback
                     err_trace = traceback.format_exc()
                     self.log_callback(f"[NSFWDetector v11] ERRO fatal ao iniciar processo worker:\n{err_trace}", "error")
                 return False
 
         except Exception as e:
-            if self.log_callback: self.log_callback(f"[NSFWDetector v11] Falha crassa na inicialização: {e}", "error")
+            if self.log_callback:
+                self.log_callback(f"[NSFWDetector v11] Falha crassa na inicialização: {e}", "error")
             return False
 
     def _send_command(self, obj: dict):
@@ -177,7 +180,8 @@ class NSFWDetector:
             try:
                 for line in iter(self.worker_process.stdout.readline, ""):
                     line = line.strip()
-                    if not line: continue
+                    if not line:
+                        continue
                     # Intercept debug prints from the worker
                     if line.startswith("[Worker]"):
                         if self.log_callback:
@@ -192,22 +196,24 @@ class NSFWDetector:
                         print(f"[NSFW Worker LOG] {line}")
             except Exception:
                 pass
-                
+
         t = threading.Thread(target=_read, daemon=True)
         t.start()
         t.join(timeout)
-        
+
         if t.is_alive():
-            if self.log_callback: self.log_callback(f"[NSFWDetector IPC] TRÁGICO: Worker demorou mais de {timeout}s para responder (Timeout/Lock).", "error")
+            if self.log_callback:
+                self.log_callback(f"[NSFWDetector IPC] TRÁGICO: Worker demorou mais de {timeout}s para responder (Timeout/Lock).", "error")
             return {}
-            
+
         line = result[0]
         if not line:
             return {}
         try:
             return json.loads(line)
         except json.JSONDecodeError:
-            if self.log_callback: self.log_callback(f"[NSFWDetector IPC] Erro de JSONDecode no Worker. Resposta: {line}", "error")
+            if self.log_callback:
+                self.log_callback(f"[NSFWDetector IPC] Erro de JSONDecode no Worker. Resposta: {line}", "error")
             return {}
 
     def cleanup(self):
@@ -227,9 +233,9 @@ class NSFWDetector:
             success, encoded_img = cv2.imencode('.jpg', img_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
             if not success:
                 return []
-                
+
             img_b64 = base64.b64encode(encoded_img.tobytes()).decode('utf-8')
-            
+
             try:
                 self._send_command({"cmd": "infer", "image_b64": img_b64, "resolution": resolution})
                 resp = self._recv_response()
@@ -237,10 +243,12 @@ class NSFWDetector:
                     return resp.get("detections", [])
                 else:
                     err = resp.get("error", "Unknown error") if resp else "Empty response"
-                    if self.log_callback: self.log_callback(f"[NSFWDetector IPC] Worker infer failed: {err}", "error")
+                    if self.log_callback:
+                        self.log_callback(f"[NSFWDetector IPC] Worker infer failed: {err}", "error")
                     return []
             except Exception as e:
-                if self.log_callback: self.log_callback(f"[NSFWDetector IPC] Communication error: {e}", "error")
+                if self.log_callback:
+                    self.log_callback(f"[NSFWDetector IPC] Communication error: {e}", "error")
                 return []
 
     # ================================================================
@@ -270,7 +278,7 @@ class NSFWDetector:
             total = img_bgr.shape[0] * img_bgr.shape[1]
             region = w * h
             if 0.15 * total < region < 0.95 * total:
-                return img_bgr[y:y+h, x:x+w]
+                return img_bgr[y:y + h, x:x + w]
         return img_bgr
 
     def _quadrants(self, img):
@@ -280,11 +288,11 @@ class NSFWDetector:
             return []
         ch, cw = h // 2, w // 2
         return [
-            img[ch-qh//2:ch+qh//2, cw-qw//2:cw+qw//2],  # Centro
-            img[h-qh:h, 0:qw],                             # Baixo-esquerda
-            img[h-qh:h, w-qw:w],                           # Baixo-direita
-            img[0:qh, 0:qw],                               # Topo-esquerda
-            img[0:qh, w-qw:w],                             # Topo-direita
+            img[ch - qh // 2:ch + qh // 2, cw - qw // 2:cw + qw // 2],
+            img[h - qh:h, 0:qw],
+            img[h - qh:h, w - qw:w],
+            img[0:qh, 0:qw],
+            img[0:qh, w - qw:w],
         ]
 
     # ================================================================
@@ -298,7 +306,11 @@ class NSFWDetector:
             return {'is_nsfw': False, 'score': 0.0, 'details': {}}
 
         if not np.any(img_bgr) or img_bgr.sum() == 0:
-            if getattr(self, 'log_callback', None): self.log_callback(f"[NSFWDetector v11] AVISO: A imagem capturada está TODA PRETA! Isso pode ocorrer se o SwitchPilot.exe não tiver DPIAwareness correto ou se a janela não estiver visível.", "warning")
+            if getattr(self, 'log_callback', None):
+                self.log_callback(
+                    "[NSFWDetector v11] AVISO: A imagem capturada está TODA PRETA!",
+                    "warning"
+                )
             return {'is_nsfw': False, 'score': 0.0, 'details': {}}
 
         try:
@@ -314,7 +326,8 @@ class NSFWDetector:
         except Exception as e:
             import traceback
             err_msg = traceback.format_exc()
-            if getattr(self, 'log_callback', None): self.log_callback(f"[NSFWDetector v11] Erro na inferência rápida via IPC: {e}\\n{err_msg}", "error")
+            if getattr(self, 'log_callback', None):
+                self.log_callback(f"[NSFWDetector v11] Erro na inferência rápida via IPC: {e}\n{err_msg}", "error")
             return {'is_nsfw': False, 'score': 0.0, 'details': {}}
 
     # ================================================================

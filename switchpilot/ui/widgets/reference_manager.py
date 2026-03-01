@@ -240,7 +240,7 @@ class ReferenceManagerWidget(QWidget):
         self.remove_reference_button = QPushButton("Remover Selecionada")
         self.nsfw_checkbox = QCheckBox("Detecção Adicional NSFW")
         self.nsfw_checkbox.setToolTip("Envia o PGM atual à IA p/ detectar nudez nativamente em tempo real.")
-        
+
         self.configure_actions_button.setEnabled(False)
         self.remove_reference_button.setEnabled(False)
         self.nsfw_checkbox.setEnabled(False)
@@ -1263,7 +1263,7 @@ class ReferenceManagerWidget(QWidget):
                     self.pgm_selection_changed.emit(pgm_details)
                     # Opção: print debug para confirmar restauração
                     # print(f"[RefMgr] Restaurado PGM de '{ref_data['name']}': ROI={roi}")
-                    
+
                 # Restaurar estado da checkbox
                 self.nsfw_checkbox.blockSignals(True)
                 self.nsfw_checkbox.setChecked(ref_data.get('is_nsfw', False))
