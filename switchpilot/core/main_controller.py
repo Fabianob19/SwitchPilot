@@ -62,6 +62,7 @@ class MainController(QObject):
         if self.ref_manager_widget:
             self._log_internal(f"Conectando ao ReferenceManagerWidget: {self.ref_manager_widget}", "debug")
             self.ref_manager_widget.references_updated.connect(self.update_references_from_ui)
+            self.ref_manager_widget.nsfw_toggled.connect(self._on_nsfw_live_toggle)
             self.update_references_from_ui(self.ref_manager_widget.get_all_references_data())
         else:
             self._log_internal("[Core CRITICAL] ReferenceManagerWidget não foi fornecido.", "error")
@@ -138,6 +139,15 @@ class MainController(QObject):
         else:
             self._log_internal("Detalhes PGM ainda não definidos ou não atualizados pela UI.", "debug")
 
+    def _on_nsfw_live_toggle(self, enabled):
+        """Toggle NSFW ao vivo — encaminha para a thread de monitoramento e salva o estado."""
+        self.nsfw_enabled = enabled
+        if hasattr(self, 'monitor_thread_instance') and self.monitor_thread_instance and self.monitor_thread_instance.isRunning():
+            self.monitor_thread_instance.set_nsfw_enabled(enabled)
+        else:
+            state = "ativada" if enabled else "desativada"
+            self._log_internal(f"[NSFW] Detecção {state} (será aplicada ao iniciar monitoramento)", "info")
+
     def set_pgm_details(self, pgm_details):
         """Atualiza detalhes PGM recebidos da UI (ex: ao selecionar referência)."""
         self.pgm_details = pgm_details
@@ -187,6 +197,23 @@ class MainController(QObject):
         self.monitor_thread_instance.log_signal.connect(self._handle_thread_log)
         self.monitor_thread_instance.status_signal.connect(self._handle_thread_status)
         self.monitor_thread_instance.finished.connect(self._on_monitor_thread_finished)
+
+        # Repassar estado atual do NSFW para a recém-criada thread
+        if getattr(self, 'nsfw_enabled', False):
+            self.monitor_thread_instance.set_nsfw_enabled(True)
+            # Aplicar limiares NSFW salvos (se houver config_manager acessível)
+            try:
+                parent_window = self.parent()
+                if parent_window and hasattr(parent_window, 'config_manager'):
+                    nsfw_cfg = parent_window.config_manager.get_nsfw_settings()
+                    detector = self.monitor_thread_instance.nsfw_detector
+                    if detector:
+                        detector.set_thresholds(
+                            nsfw_cfg.get('general_threshold', 0.55),
+                            nsfw_cfg.get('min_confidence', {})
+                        )
+            except Exception:
+                pass
 
         self.monitor_thread_instance.start()
         self.monitoring_actually_started.emit()

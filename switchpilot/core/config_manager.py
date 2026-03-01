@@ -64,6 +64,13 @@ class ConfigManager:
         'monitoring_settings': {
             'interval': 0.5,
             'default_threshold': 0.90
+        },
+        'nsfw_settings': {
+            'general_threshold': 0.55,
+            'min_confidence': {
+                'FEMALE_BREAST_EXPOSED': 0.60,
+                'ANUS_EXPOSED': 0.40
+            }
         }
     }
 
@@ -216,13 +223,13 @@ class ConfigManager:
 
     def set_references(self, references: list):
         """Salva lista de referências (metadados serializáveis apenas)."""
-        # Filtrar campos não serializáveis (image_data contém numpy arrays)
         serializable = []
         for ref in references:
             clean_ref = {
                 'name': ref.get('name', ''),
                 'type': ref.get('type', 'static'),
                 'path': ref.get('path', ''),
+                'is_nsfw': ref.get('is_nsfw', False),
                 'actions': ref.get('actions', []),
                 'pgm_details': ref.get('pgm_details', {})
             }
@@ -239,6 +246,15 @@ class ConfigManager:
         self.set('monitoring_settings', {
             'interval': interval,
             'default_threshold': default_threshold
+        })
+
+    def get_nsfw_settings(self) -> dict:
+        return self.get('nsfw_settings') or self.DEFAULTS['nsfw_settings']
+
+    def set_nsfw_settings(self, general_threshold: float = 0.55, min_confidence: dict = None):
+        self.set('nsfw_settings', {
+            'general_threshold': general_threshold,
+            'min_confidence': min_confidence or {}
         })
 
     # --- Export/Import ---

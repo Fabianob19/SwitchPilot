@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
         appearance_menu = settings_menu.addMenu("&Aparência")
 
         # Adicionar ação para limiares
-        self.thresholds_action = QAction("Limiar de Similaridade...", self)
+        self.thresholds_action = QAction("Configurar Limiares...", self)
         self.thresholds_action.triggered.connect(self._open_thresholds_dialog)
         self.thresholds_action.setShortcut("Ctrl+T")
         settings_menu.addAction(self.thresholds_action)
@@ -878,7 +878,7 @@ class MainWindow(QMainWindow):
                 self._toggle_capture_area_overlay(True)
 
     def _open_thresholds_dialog(self):
-        # Pega os valores atuais do MainController se possível
+        # Valores atuais de similaridade
         static_val = 0.90
         seq_val = 0.90
         interval_val = 0.5
@@ -886,17 +886,45 @@ class MainWindow(QMainWindow):
             static_val = getattr(self.main_controller, 'current_static_threshold', 0.90)
             seq_val = getattr(self.main_controller, 'current_sequence_threshold', 0.90)
             interval_val = getattr(self.main_controller, 'current_monitor_interval', 0.5)
-        dialog = ThresholdConfigDialog(static_value=static_val, sequence_value=seq_val, interval_value=interval_val, parent=self)
-        # Conectar o sinal para atualizar os limiares imediatamente ao clicar OK
-        print("[DEBUG] Conectando sinal thresholds_updated do diálogo ao slot on_thresholds_updated")
 
+        # Valores atuais de NSFW (do config ou defaults)
+        nsfw_settings = self.config_manager.get_nsfw_settings()
+        nsfw_general = int(nsfw_settings.get('general_threshold', 0.55) * 100)
+        min_conf = nsfw_settings.get('min_confidence', {})
+        nsfw_breast = int(min_conf.get('FEMALE_BREAST_EXPOSED', 0.60) * 100)
+        nsfw_anus = int(min_conf.get('ANUS_EXPOSED', 0.40) * 100)
+        nsfw_genitalia = int(min_conf.get('FEMALE_GENITALIA_EXPOSED', 0) * 100)
+
+        dialog = ThresholdConfigDialog(
+            static_value=static_val, sequence_value=seq_val, interval_value=interval_val,
+            nsfw_general=nsfw_general, nsfw_breast=nsfw_breast,
+            nsfw_anus=nsfw_anus, nsfw_genitalia=nsfw_genitalia,
+            parent=self
+        )
+
+        # Conectar sinal de similaridade
         def on_thresholds_updated(static_new, seq_new, interval_new):
-            print(f"[DEBUG] Sinal thresholds_updated recebido: static={static_new}, seq={seq_new}, interval={interval_new}")
             if hasattr(self, 'main_controller') and self.main_controller:
                 self.main_controller.update_static_threshold(static_new)
                 self.main_controller.update_sequence_threshold(seq_new)
                 self.main_controller.update_monitor_interval(interval_new)
+                # Persistir
+                self.config_manager.set_monitoring_settings(interval_new, static_new)
+                self.config_manager.save()
+
+        # Conectar sinal NSFW
+        def on_nsfw_thresholds_updated(general, min_confidence):
+            # Persistir no config
+            self.config_manager.set_nsfw_settings(general, min_confidence)
+            self.config_manager.save()
+            # Aplicar ao detector ao vivo
+            if hasattr(self, 'main_controller') and self.main_controller:
+                mt = getattr(self.main_controller, 'monitor_thread', None)
+                if mt and hasattr(mt, 'nsfw_detector') and mt.nsfw_detector:
+                    mt.nsfw_detector.set_thresholds(general, min_confidence)
+
         dialog.thresholds_updated.connect(on_thresholds_updated)
+        dialog.nsfw_thresholds_updated.connect(on_nsfw_thresholds_updated)
         dialog.exec_()
 
     def _toggle_capture_area_overlay(self, checked):

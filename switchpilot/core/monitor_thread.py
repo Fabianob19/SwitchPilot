@@ -71,11 +71,34 @@ class MonitorThread(QThread):
         self.weight_ncc = WEIGHT_NCC
         self.weight_lbp = WEIGHT_LBP
 
-        # Confirmação temporal (usando constantes)
         self.confirm_frames_required = CONFIRM_FRAMES_REQUIRED
         self.clear_frames_required = CLEAR_FRAMES_REQUIRED
         self._consec_match = 0
         self._consec_nonmatch = 0
+
+        # Inicializar Detector NSFW se disponível
+        try:
+            from switchpilot.core.nsfw_detector import NSFWDetector
+            self.nsfw_detector = NSFWDetector(log_callback=lambda msg, lvl="info": self.log_signal.emit(msg, lvl))
+            self.nsfw_error = None
+        except Exception as e:
+            self.nsfw_detector = None
+            self.nsfw_error = str(e)
+            print(f"[MonitorThread] Erro ao carregar NSFWDetector: {e}")
+
+    def set_nsfw_enabled(self, enabled):
+        """Toggle NSFW ao vivo — sem parar o monitoramento."""
+        if self.nsfw_detector:
+            if enabled and self.nsfw_detector.worker_process is None:
+                success = self.nsfw_detector.initialize()
+                if not success:
+                    self.log_signal.emit(f"[NSFW] Falha ao ativar: Engine ONNX não iniciou. Veja o log acima com detalhes do erro.", "error")
+                    self.nsfw_detector.enabled = False
+                    return
+            self.nsfw_detector.enabled = enabled
+            state = "ativada" if enabled else "desativada"
+            self.log_signal.emit(f"[NSFW] Detecção {state} ao vivo", "info")
+
 
     def set_static_threshold(self, threshold):
         if 0.0 <= threshold <= 1.0:
@@ -221,24 +244,28 @@ class MonitorThread(QThread):
         s = w_hist * s_hist + w_ncc * s_ncc + w_lbp * s_lbp
 
         # Log com indicador de adaptação
-        adapt_tag = "[ADAPT] " if adapted else ""
-        self.log_signal.emit(f"Scores {adapt_tag}-> Hist:{s_hist:.3f} NCC:{s_ncc:.3f} LBP:{s_lbp:.3f} | S:{s:.3f}", "debug")
+        adapt_tag = "≈" if adapted else ""
+        self.log_signal.emit(f"[NCC] {adapt_tag}S:{s:.3f} H:{s_hist:.2f} N:{s_ncc:.2f} L:{s_lbp:.2f}", "debug")
         return s
 
     def run(self):
         self.running = True
-        self.log_signal.emit("Thread de monitoramento iniciada.", "info")
+        self.log_signal.emit("▶ Monitoramento ativo", "info")
+        
+        if getattr(self, 'nsfw_error', None):
+            self.log_signal.emit(f"⚠️ AVISO: NSFWDetector falhou ao carregar. Erro: {self.nsfw_error}", "error")
+            
         self.status_signal.emit("Monitoramento Ativo")
 
         if not self.references_data:
-            self.log_signal.emit("Nenhuma referência carregada na thread. Parando.", "warning")
+            self.log_signal.emit("⚠ Nenhuma referência carregada. Monitoramento cancelado.", "warning")
             self.status_signal.emit("Monitoramento Parado")
             return  # Sair imediatamente
 
         # Preparar referências (ex: carregar imagens estáticas, calcular histogramas)
         prepared_references = []
         max_sequence_len = 0
-        self.log_signal.emit(f"Preparando {len(self.references_data)} referências para monitoramento...", "debug")
+        self.log_signal.emit(f"Carregando {len(self.references_data)} referência(s)...", "debug")
         for ref in self.references_data:
             if ref.get('type') == 'static':
                 # NOVO: Suporta tanto 'image_data' (memória) quanto 'path' (disco)
@@ -248,17 +275,17 @@ class MonitorThread(QThread):
                     img = ref['image_data']
                     if len(img.shape) == 3:  # Se for colorida, converter para grayscale
                         img = cv2.cvtColor(img, cv2.IMREAD_GRAYSCALE)
-                    self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada da memória.", "debug")
+                    self.log_signal.emit(f"[NCC] '{ref.get('name', '')}' carregada (memória)", "debug")
                 elif 'path' in ref:
                     # Imagem em disco (backward compatibility)
                     img = cv2.imread(ref['path'], cv2.IMREAD_GRAYSCALE)
                     if img is not None:
-                        self.log_signal.emit(f"Referência estática '{ref.get('name', '')}' carregada do disco.", "debug")
+                        self.log_signal.emit(f"[NCC] '{ref.get('name', '')}' carregada (disco)", "debug")
                     else:
-                        self.log_signal.emit(f"Falha ao carregar imagem de referência: {ref['path']}", "error")
+                        self.log_signal.emit(f"❌ Falha ao carregar referência: {ref['path']}", "error")
 
                 if img is not None:
-                    prepared_references.append({'type': 'static', 'name': ref.get('name', ''), 'img': img, 'actions': ref.get('actions', [])})
+                    prepared_references.append({'type': 'static', 'name': ref.get('name', ''), 'img': img, 'actions': ref.get('actions', []), 'is_nsfw': ref.get('is_nsfw', False)})
             elif ref.get('type') == 'sequence':
                 frames = []
                 # NOVO: Suporta tanto 'image_data' (lista de arrays) quanto 'frame_paths' (lista de paths)
@@ -270,7 +297,7 @@ class MonitorThread(QThread):
                                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                             frames.append(frame)
                     if frames:
-                        self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada da memória com {len(frames)} frames.", "debug")
+                        self.log_signal.emit(f"[NCC] Seq '{ref.get('name', '')}' carregada ({len(frames)} frames)", "debug")
                 elif 'frame_paths' in ref:
                     # Frames em disco (backward compatibility)
                     for fp in ref.get('frame_paths', []):
@@ -278,22 +305,22 @@ class MonitorThread(QThread):
                         if img is not None:
                             frames.append(img)
                     if frames:
-                        self.log_signal.emit(f"Sequência '{ref.get('name', '')}' carregada do disco com {len(frames)} frames.", "debug")
+                        self.log_signal.emit(f"[NCC] Seq '{ref.get('name', '')}' carregada do disco ({len(frames)} frames)", "debug")
 
                 if frames:
-                    prepared_references.append({'type': 'sequence', 'name': ref.get('name', ''), 'frames': frames, 'actions': ref.get('actions', [])})
+                    prepared_references.append({'type': 'sequence', 'name': ref.get('name', ''), 'frames': frames, 'actions': ref.get('actions', []), 'is_nsfw': ref.get('is_nsfw', False)})
                     max_sequence_len = max(max_sequence_len, len(frames))
                 else:
-                    self.log_signal.emit(f"Falha ao carregar frames da sequência: {ref.get('name', '')}", "error")
+                    self.log_signal.emit(f"❌ Falha ao carregar sequência: {ref.get('name', '')}", "error")
 
-        self.log_signal.emit(f"[DIAG] prepared_references: {prepared_references}", "debug")
+        self.log_signal.emit(f"{len(prepared_references)} referência(s) pronta(s) para monitoramento.", "debug")
 
         if not prepared_references:
-            self.log_signal.emit("Nenhuma referência válida para monitoramento. Parando thread.", "error")
+            self.log_signal.emit("❌ Nenhuma referência válida. Monitoramento cancelado.", "error")
             self.status_signal.emit("Monitoramento Parado")
             return  # Sair imediatamente
 
-        self.log_signal.emit(f"[DIAG] Antes do while self.running: running={self.running}", "debug")
+
 
         buffer_pgm = []
         # Detalhes da captura PGM
@@ -304,7 +331,7 @@ class MonitorThread(QThread):
         with mss.mss() as sct:
             while self.running:
                 start_cycle = time.time()
-                self.log_signal.emit("Iniciando ciclo de monitoramento...", "debug")
+
                 captured_frame_bgr = None
                 try:
                     if capture_kind == 'monitor':
@@ -319,7 +346,7 @@ class MonitorThread(QThread):
                     elif capture_kind == 'window':
                         window_obj = capture_id
                         if not (window_obj and hasattr(window_obj, 'visible') and window_obj.visible and window_obj.width > 0 and window_obj.height > 0):
-                            self.log_signal.emit(f"Janela '{window_obj.title if window_obj else 'N/A'}' não está mais válida ou visível. Pausando captura temporariamente.", "warning")
+                            self.log_signal.emit(f"⚠ Janela '{window_obj.title if window_obj else 'N/A'}' não visível. Pausando...", "warning")
                             time.sleep(self.monitor_interval * 2)
                             continue
                         capture_region_global = (window_obj.left + roi_x,
@@ -330,12 +357,12 @@ class MonitorThread(QThread):
                         pil_img = pyautogui.screenshot(region=capture_region_global)
                         captured_frame_bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
                     if captured_frame_bgr is None:
-                        self.log_signal.emit(f"Falha ao capturar frame PGM ({capture_kind}).", "error")
+                        self.log_signal.emit(f"❌ Falha na captura PGM ({capture_kind})", "error")
                         continue
                     captured_frame_gray = cv2.cvtColor(captured_frame_bgr, cv2.COLOR_BGR2GRAY)
                     frame_gray_ds = self._downscale_gray(captured_frame_gray)
                 except Exception as e:
-                    self.log_signal.emit(f"Erro ao capturar frame PGM: {e}", "error")
+                    self.log_signal.emit(f"❌ Erro de captura: {e}", "error")
                     continue
 
                 match_found_in_cycle = False
@@ -347,6 +374,63 @@ class MonitorThread(QThread):
                     if not self.running:
                         break
                     ref_name = ref.get('name', 'Desconhecida')
+                    
+                    nsfw_triggered = False
+                    _has_det = hasattr(self, 'nsfw_detector') and self.nsfw_detector is not None
+                    _det_en = self.nsfw_detector.enabled if _has_det else False
+                    _ref_nsfw = ref.get('is_nsfw', False)
+                    if not _ref_nsfw or not _has_det or not _det_en:
+                        self.log_signal.emit(f"[NSFW DEBUG] ref.is_nsfw={_ref_nsfw} detector={_has_det} enabled={_det_en}", "debug")
+                    if _ref_nsfw and _has_det and _det_en:
+                        # === FASE 1: Rápida (~30ms) — NCC não espera ===
+                        nsfw_res = self.nsfw_detector.detect_fast(captured_frame_bgr, threshold=0.55)
+                        
+                        score = nsfw_res.get('score', 0)
+                        details = nsfw_res.get('details', {})
+                        parts = details.get('parts', {})
+                        
+                        parts_str = ', '.join(f"{k}({v:.0%})" for k, v in parts.items()) if parts else 'Nenhuma'
+                        self.log_signal.emit(f"[NSFW] ⚡ Score: {score:.2f} | Partes: {parts_str}", "info")
+
+                        if nsfw_res.get('is_nsfw'):
+                            parts_str = ', '.join(parts.keys()) if parts else '?'
+                            self.log_signal.emit(f"🔥 NSFW DETECTADO! (Score: {score:.3f}) Partes: {parts_str}", "success")
+                            nsfw_triggered = True
+                        else:
+                            # === FASE 2: Profunda em thread background ===
+                            # Capturar referências locais para o callback (thread-safe via Qt signals)
+                            _ref_actions = ref.get('actions', [])
+                            _action_cb = self.action_executor_callback
+                            _log = self.log_signal
+                            _get_desc = self._get_action_description
+                            
+                            def _on_deep_detected(result):
+                                s = result.get('score', 0)
+                                p = result.get('details', {}).get('parts', {})
+                                ps = ', '.join(p.keys()) if p else '?'
+                                _log.emit(f"[NSFW] 🔍 Score: {s:.2f} | Partes: {ps}", "info")
+                                _log.emit(f"🔥 NSFW DETECTADO! (Score: {s:.3f}) Partes: {ps}", "success")
+                                if _action_cb and _ref_actions:
+                                    for action in _ref_actions:
+                                        desc = _get_desc(action)
+                                        _log.emit(f"✅ Executando: {desc}", "success")
+                                        _action_cb(action)
+                            
+                            self.nsfw_detector.detect_deep_async(
+                                captured_frame_bgr, _on_deep_detected, threshold=0.55
+                            )
+
+                    if nsfw_triggered:
+                        if self.action_executor_callback and ref.get('actions'):
+                            for action in ref.get('actions'):
+                                desc = self._get_action_description(action)
+                                self.log_signal.emit(f"✅ Executando: {desc}", "success")
+                                self.action_executor_callback(action)
+                        match_found_in_cycle = True
+                        self._consec_match = 0
+                        buffer_pgm.clear()
+                        break
+                        
                     if ref.get('type') == 'static':
                         ref_image_gray = ref.get('img')
                         # Downscale/refit ref para o mesmo tamanho de cálculo
@@ -360,13 +444,13 @@ class MonitorThread(QThread):
                             self._consec_match += 1
                             self._consec_nonmatch = 0
                             if self._consec_match < self.confirm_frames_required:
-                                self.log_signal.emit(f"Confirmação: {self._consec_match}/{self.confirm_frames_required} (S={s:.3f}) — aguardando", "debug")
+                                self.log_signal.emit(f"[NCC] Confirmando '{ref_name}': {self._consec_match}/{self.confirm_frames_required} (S={s:.3f})", "info")
                             if self._consec_match >= self.confirm_frames_required:
-                                self.log_signal.emit(f"Referência '{ref_name}' detectada (S={s:.3f}). Executando ação...", "success")
+                                self.log_signal.emit(f"✅ NCC: '{ref_name}' detectada (S={s:.3f})", "success")
                                 if self.action_executor_callback and ref.get('actions'):
                                     for action in ref.get('actions'):
                                         desc = self._get_action_description(action)
-                                        self.log_signal.emit(f"Executando ação: {desc}", "info")
+                                        self.log_signal.emit(f"✅ Executando: {desc}", "success")
                                         self.action_executor_callback(action)
                                 match_found_in_cycle = True
                                 self._consec_match = 0  # reset após acionar
@@ -392,20 +476,20 @@ class MonitorThread(QThread):
                                 s_i = self._combined_similarity(ref_gray_ds, buffer_frame_gray)
                                 frame_scores.append(s_i)
                             s_seq = float(np.mean(frame_scores)) if frame_scores else 0.0
-                            self.log_signal.emit(f"Seq '{ref_name}', Scores=[{', '.join([f'{v:.2f}' for v in frame_scores])}] -> S={s_seq:.3f}", "debug")
+                            self.log_signal.emit(f"[NCC] Seq '{ref_name}' S={s_seq:.3f}", "debug")
                             cycle_best_score = max(cycle_best_score, s_seq)
                             best_ref_name = ref_name if cycle_best_score == s_seq else best_ref_name
                             if s_seq >= self.similarity_threshold_sequence_frame:
                                 self._consec_match += 1
                                 self._consec_nonmatch = 0
                                 if self._consec_match < self.confirm_frames_required:
-                                    self.log_signal.emit(f"Confirmação: {self._consec_match}/{self.confirm_frames_required} (S={s_seq:.3f}) — aguardando", "debug")
+                                    self.log_signal.emit(f"[NCC] Confirmando seq '{ref_name}': {self._consec_match}/{self.confirm_frames_required} (S={s_seq:.3f})", "info")
                                 if self._consec_match >= self.confirm_frames_required:
-                                    self.log_signal.emit(f"Referência de SEQUÊNCIA encontrada: '{ref_name}' (S={s_seq:.3f})", "success")
+                                    self.log_signal.emit(f"✅ NCC: Sequência '{ref_name}' detectada (S={s_seq:.3f})", "success")
                                     if self.action_executor_callback and ref.get('actions'):
                                         for action in ref.get('actions'):
                                             desc = self._get_action_description(action)
-                                            self.log_signal.emit(f"Executando ação: {desc}", "info")
+                                            self.log_signal.emit(f"✅ Executando: {desc}", "success")
                                             self.action_executor_callback(action)
                                     match_found_in_cycle = True
                                     self._consec_match = 0
@@ -417,18 +501,13 @@ class MonitorThread(QThread):
                                     self._consec_match = 0
 
                 if match_found_in_cycle:
-                    self.log_signal.emit("Match encontrado. Aguardando antes do próximo ciclo completo de verificação.", "debug")
-                    time.sleep(self.monitor_interval)  # reduzir espera pós-match, mantendo sempre enviar
-                else:
-                    self.log_signal.emit(f"Nenhum match neste ciclo. Melhor S={cycle_best_score:.3f} ({best_ref_name if best_ref_name else 'N/A'})", "debug")
                     time.sleep(self.monitor_interval)
-                elapsed = time.time() - start_cycle
-                self.log_signal.emit(f"Ciclo de monitoramento finalizado em {elapsed:.2f}s.", "debug")
+                else:
+                    time.sleep(self.monitor_interval)
 
-        self.log_signal.emit("[DIAG] Saiu do método run() da MonitorThread.", "debug")
-        self.log_signal.emit("Thread de monitoramento terminada.", "info")
+        self.log_signal.emit("⏹ Monitoramento encerrado", "info")
         self.status_signal.emit("Monitoramento Parado")
 
     def stop(self):
-        self.log_signal.emit("Sinal de parada recebido pela thread de monitoramento.", "info")
+        self.log_signal.emit("Parando monitoramento...", "info")
         self.running = False

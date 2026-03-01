@@ -1,4 +1,18 @@
 import sys
+import os
+import multiprocessing
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    
+    if "--nsfw-worker" in sys.argv:
+        from switchpilot.core.nsfw_worker import run_worker
+        run_worker()
+        sys.exit(0)
+
+import numpy
+import cv2
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QSharedMemory
@@ -35,6 +49,7 @@ def get_git_version():
 
 
 if __name__ == "__main__":
+
     # Ativar atributos de High DPI do Qt ANTES do QApplication
     try:
         from PyQt5 import QtCore

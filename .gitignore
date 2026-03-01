@@ -90,3 +90,9 @@ tools/publish_github.ps1
 .agent/
 version_info.txt
 tools/scripts/
+docs/PLAN-*.md
+
+# === Scripts de Teste / Debug NSFW ===
+test_*.py
+nsfw_init.txt
+*.py.backup

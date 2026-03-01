@@ -5,11 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-03-01
+### Added
+- **NSFW Detection v11**: Motor de detecção NSFW customizado baseado em YOLOv8 (640m) com Engine ONNX própria.
+- **GPU Acceleration**: Suporte a aceleração por GPU via DirectML (compatível com NVIDIA, AMD e Intel).
+  - Fallback automático para CPU quando GPU não disponível.
+- **Fase 2 Assíncrona**: Detecção profunda em background thread com análise por quadrantes.
+- **Limiares NSFW Configuráveis**: Interface para ajustar sensibilidade geral e confiança mínima por categoria (seios, ânus, genitálias) via menu Configurações → Configurar Limiares (Ctrl+T).
+- **Persistência NSFW**: Configurações de limiares NSFW salvas em `switchpilot_config.json`.
+
+### Changed
+- **ONNX Session Optimization**: Graph optimization (`ORT_ENABLE_ALL`) + configuração DirectML para máxima performance.
+- **Resolução Adaptativa**: Fase 1 (rápida) usa 416px, Fase 2 (profunda) usa 640px — ~2x mais rápido sem perder precisão.
+- **CLAHE Preprocessing**: Equalização adaptativa de contraste melhora detecção em cenas escuras (+10-24%).
+- **YOLO Score Filter**: Reduzido de 0.20 para 0.15, melhor recall sem falsos positivos.
+- **Dependências**: Adicionadas `nudenet` e `onnxruntime-directml` ao `requirements.txt`.
+- **Build**: `SwitchPilot.spec` atualizado para o novo sistema de detecção.
+- **UI**: Menu "Limiar de Similaridade..." renomeado para "Configurar Limiares..." com seção NSFW integrada.
+
+### Removed
+- Modelo ViT ONNX antigo (`nsfw.onnx`) e classificador de 5 categorias genéricas.
+- Pacote `Pillow` como dependência (não é mais necessário).
+- Scripts de teste avulsos da raiz do projeto (`test_nsfw_speed.py`, `test_onnx.py`).
+
 ## [1.6.2] - 2026-02-10
 ### Fixed
 - **Persistence**: Fixed an issue where PGM Region details were lost after application restart.
 - **UI Overlay**: Capture Area Overlay (F11) now correctly updates its position when selecting different references.
-- **Auto-Save**: References and PGM details are now saved immediately upon modification to prevent data loss on crash.
+- **Auto-Save**: References, PGM details, **OBS, and vMix settings** are now saved immediately upon modification.
+- **Installer**: Fixed missing `markdown` dependency preventing Help Center from loading.
+- **Installer**: Fixed version metadata (now correctly shows 1.6.2 instead of 0.0.0.0).
+
+### Changed
+- **Cleanup**: Removed unused `tools/` and `tests/` directories and legacy config files from the repository.
+- **Build**: Improved build process to ensure a clean environment (no stale config files).
 
 ## [1.6.1] - 2026-02-05
 ### Fixed

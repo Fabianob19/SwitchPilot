@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QMenu,
     QAction,
     QApplication,
+    QCheckBox,
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 import pyautogui  # Adicionada importação
@@ -90,7 +91,8 @@ class ReferenceManagerWidget(QWidget):
     """Widget para gerenciar as imagens de referência para monitoramento."""
     # Sinal para notificar a MainWindow ou outro controller sobre mudanças nas referências
     references_updated = pyqtSignal(list)
-    pgm_selection_changed = pyqtSignal(dict)  # Novo sinal para mudança de PGM via seleção
+    pgm_selection_changed = pyqtSignal(dict)
+    nsfw_toggled = pyqtSignal(bool)  # Toggle NSFW ao vivo durante monitoramento
 
     def __init__(self, parent=None, main_controller=None):
         super().__init__(parent)
@@ -236,11 +238,16 @@ class ReferenceManagerWidget(QWidget):
         list_actions_layout = QHBoxLayout()
         self.configure_actions_button = QPushButton("Configurar Ações da Selecionada")
         self.remove_reference_button = QPushButton("Remover Selecionada")
+        self.nsfw_checkbox = QCheckBox("Detecção Adicional NSFW")
+        self.nsfw_checkbox.setToolTip("Envia o PGM atual à IA p/ detectar nudez nativamente em tempo real.")
+        
         self.configure_actions_button.setEnabled(False)
         self.remove_reference_button.setEnabled(False)
+        self.nsfw_checkbox.setEnabled(False)
 
         list_actions_layout.addWidget(self.configure_actions_button)
         list_actions_layout.addWidget(self.remove_reference_button)
+        list_actions_layout.addWidget(self.nsfw_checkbox)
         main_layout.addLayout(list_actions_layout)  # Adicionado diretamente ao main_layout
 
         # main_layout.addWidget(list_group)  # Comentado/Removido pois list_group foi removido
@@ -252,6 +259,7 @@ class ReferenceManagerWidget(QWidget):
         self.select_region_button.clicked.connect(self._handle_select_pgm_region)
         self.remove_reference_button.clicked.connect(self._handle_remove_reference)
         self.configure_actions_button.clicked.connect(self._handle_configure_actions)
+        self.nsfw_checkbox.toggled.connect(self._on_nsfw_toggled)
         self.btn_refresh_monitors.clicked.connect(self._populate_monitor_list)
         self.btn_refresh_windows.clicked.connect(self._populate_window_list)
         if NDI_AVAILABLE:
@@ -1231,6 +1239,7 @@ class ReferenceManagerWidget(QWidget):
         is_item_selected = current is not None
         self.configure_actions_button.setEnabled(is_item_selected)
         self.remove_reference_button.setEnabled(is_item_selected)
+        self.nsfw_checkbox.setEnabled(is_item_selected)
 
         # Restaurar região PGM da referência selecionada se disponível
         if is_item_selected:
@@ -1254,6 +1263,21 @@ class ReferenceManagerWidget(QWidget):
                     self.pgm_selection_changed.emit(pgm_details)
                     # Opção: print debug para confirmar restauração
                     # print(f"[RefMgr] Restaurado PGM de '{ref_data['name']}': ROI={roi}")
+                    
+                # Restaurar estado da checkbox
+                self.nsfw_checkbox.blockSignals(True)
+                self.nsfw_checkbox.setChecked(ref_data.get('is_nsfw', False))
+                self.nsfw_checkbox.blockSignals(False)
+
+    def _on_nsfw_toggled(self, checked):
+        current_item = self.reference_list_widget.currentItem()
+        if not current_item:
+            return
+        row = self.reference_list_widget.row(current_item)
+        if 0 <= row < len(self.references_data):
+            self.references_data[row]['is_nsfw'] = checked
+            self.references_updated.emit(self.references_data)
+            self.nsfw_toggled.emit(checked)  # Toggle ao vivo
 
     def _handle_add_existing_reference(self):
         # Filtros para os tipos de arquivo de imagem mais comuns

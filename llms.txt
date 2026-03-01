@@ -1,11 +1,15 @@
 # SwitchPilot
-> Intelligent automation tool for live streaming (OBS/vMix) that monitors screen regions, detects scene changes using computer vision (Histogram + NCC + LBP), and executes automatic actions.
+> Intelligent automation tool for live streaming (OBS/vMix) that monitors screen regions, detects scene changes using computer vision, and executes automatic actions — with built-in AI-powered NSFW detection.
 
 ## Core Files
 - [main.py]: Application entry point
 - [switchpilot/core/main_controller.py]: Central logic controller
 - [switchpilot/core/monitor_thread.py]: Computer vision & monitoring loop
+- [switchpilot/core/nsfw_detector.py]: AI NSFW detection engine (YOLOv8 + ONNX Runtime)
+- [switchpilot/core/nsfw_worker.py]: Isolated ONNX worker process for GPU inference
+- [switchpilot/core/config_manager.py]: Persistent settings manager
 - [switchpilot/ui/main_window.py]: Main GUI implementation
+- [switchpilot/ui/widgets/threshold_config_dialog.py]: Configurable thresholds UI
 - [switchpilot/integrations/]: External control modules (OBS, vMix)
 - [docs/developer/]: Technical documentation
 
@@ -13,10 +17,12 @@
 - **Reference Image**: A saved screenshot of a game/camera scene.
 - **ROI (Region of Interest)**: Specific screen area to monitor.
 - **Detection Algorithm**: Ensemble method using Histogram Correlation (40%), Normalized Cross-Correlation (20%), and Local Binary Patterns (40%).
+- **NSFW Detection**: YOLOv8 Medium (640m) with CLAHE preprocessing, adaptive resolution (416/640), and configurable per-category thresholds.
 - **Actions**: Commands sent to OBS (WebSocket) or vMix (HTTP API) triggers upon detection.
 
 ## Architecture
 - **Language**: Python 3.10+
 - **GUI Framework**: PyQt5
 - **CV Library**: OpenCV, NumPy
-- **Build System**: PyInstaller (Spec file included)
+- **AI Engine**: ONNX Runtime (DirectML GPU acceleration)
+- **Build System**: PyInstaller + Inno Setup

@@ -1,28 +1,41 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox, QPushButton, QDialogButtonBox
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+                             QDoubleSpinBox, QSpinBox, QPushButton,
+                             QDialogButtonBox, QFrame)
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QFont
 
 
 class ThresholdConfigDialog(QDialog):
     thresholds_updated = pyqtSignal(float, float, float)  # static, sequence, interval
+    nsfw_thresholds_updated = pyqtSignal(float, dict)  # general, min_confidence dict
 
-    def __init__(self, static_value=0.90, sequence_value=0.90, interval_value=0.5, parent=None):
+    def __init__(self, static_value=0.90, sequence_value=0.90, interval_value=0.5,
+                 nsfw_general=55, nsfw_breast=60, nsfw_anus=40, nsfw_genitalia=0,
+                 parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Configurar Limiares de Similaridade")
-        # Remover botão de ajuda ('?') do título
+        self.setWindowTitle("Configurar Limiares")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        # Tentar aplicar dark title bar quando suportado (MainWindow expõe utilitário via import tardio)
         try:
             from switchpilot.ui.main_window import enable_dark_title_bar_for_window
             enable_dark_title_bar_for_window(self)
         except Exception:
             pass
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(420)
         layout = QVBoxLayout(self)
 
-        # Valores recomendados (baseados nos logs atuais)
-        self._recommended_static = 0.90
-        self._recommended_sequence = 0.90
-        self._recommended_interval = 0.50
+        # === SEÇÃO: Similaridade de Cena ===
+        section_font = QFont()
+        section_font.setBold(True)
+        section_font.setPointSize(10)
+
+        sim_label = QLabel("Similaridade de Cena")
+        sim_label.setFont(section_font)
+        layout.addWidget(sim_label)
+
+        # Valores recomendados
+        self._rec_static = 0.90
+        self._rec_sequence = 0.90
+        self._rec_interval = 0.50
 
         # Limiar Estático
         static_layout = QHBoxLayout()
@@ -32,8 +45,8 @@ class ThresholdConfigDialog(QDialog):
         self.static_spin.setSingleStep(0.01)
         self.static_spin.setValue(static_value)
         self.static_spin.setToolTip(
-            "Limiar de similaridade para uma única imagem de referência (0.00–1.00).\n"
-            "Aumentar = mais rigor (menos falsos positivos). Diminuir = mais sensível."
+            "Nível de semelhança para uma imagem de referência única.\n"
+            "Quanto maior, mais parecida a tela precisa estar. (Padrão: 0,90)"
         )
         static_layout.addWidget(static_label)
         static_layout.addWidget(self.static_spin)
@@ -47,8 +60,8 @@ class ThresholdConfigDialog(QDialog):
         self.seq_spin.setSingleStep(0.01)
         self.seq_spin.setValue(sequence_value)
         self.seq_spin.setToolTip(
-            "Limiar de similaridade para referências com vários frames (usa a média) (0.00–1.00).\n"
-            "Aumentar = mais rigor. Diminuir = mais sensível."
+            "Nível de semelhança para referências com vários frames (usa média).\n"
+            "Quanto maior, mais parecida a tela precisa estar. (Padrão: 0,90)"
         )
         seq_layout.addWidget(seq_label)
         seq_layout.addWidget(self.seq_spin)
@@ -62,52 +75,164 @@ class ThresholdConfigDialog(QDialog):
         self.interval_spin.setSingleStep(0.05)
         self.interval_spin.setValue(interval_value)
         self.interval_spin.setToolTip(
-            "Tempo entre verificações. Menor = mais rápido e mais comandos/CPU; Maior = mais leve e mais lento."
+            "Tempo entre cada verificação da tela (em segundos).\n"
+            "Menor = mais rápido, porém maior uso de CPU/GPU. (Padrão: 0,50s)"
         )
         interval_layout.addWidget(interval_label)
         interval_layout.addWidget(self.interval_spin)
         layout.addLayout(interval_layout)
 
-        # Texto de ajuda compacto
-        help_label = QLabel(
-            "\nComo funciona: S (0–1) é uma média ponderada de 3 métricas (Hist+NCC+LBP).\n"
-            "Dispara quando S ≥ Limiar. Com K=1, se S ficar acima do limiar, envia em todo ciclo.\n\n"
-            "Dicas rápidas:\n"
-            "- Aumente o limiar para mais precisão (menos falsos positivos).\n"
-            "- Diminua o limiar para mais sensibilidade.\n"
-            "- Reduza o intervalo para resposta mais rápida (maior carga).\n"
-            "- Recomendados (padrão seguro): 0,90 / 0,90 / 0,50s."
+        # === SEPARADOR ===
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addSpacing(6)
+        layout.addWidget(separator)
+        layout.addSpacing(6)
+
+        # === SEÇÃO: Detecção NSFW ===
+        nsfw_label = QLabel("Detecção NSFW")
+        nsfw_label.setFont(section_font)
+        layout.addWidget(nsfw_label)
+
+        # Valores recomendados NSFW
+        self._rec_nsfw_general = 55
+        self._rec_nsfw_breast = 60
+        self._rec_nsfw_anus = 40
+        self._rec_nsfw_genitalia = 0
+
+        # Sensibilidade Geral
+        gen_layout = QHBoxLayout()
+        gen_label = QLabel("Sensibilidade Geral (%):")
+        self.nsfw_general_spin = QSpinBox()
+        self.nsfw_general_spin.setRange(0, 100)
+        self.nsfw_general_spin.setSingleStep(5)
+        self.nsfw_general_spin.setValue(nsfw_general)
+        self.nsfw_general_spin.setToolTip(
+            "Score mínimo para disparar a detecção NSFW.\n"
+            "Se a IA tiver certeza acima deste valor, considera NSFW.\n"
+            "Menor = mais sensível (detecta mais). Maior = mais rigoroso. (Padrão: 55%)"
         )
-        help_label.setWordWrap(True)
-        layout.addWidget(help_label)
+        gen_layout.addWidget(gen_label)
+        gen_layout.addWidget(self.nsfw_general_spin)
+        layout.addLayout(gen_layout)
 
-        # Botão "Restaurar recomendados"
-        restore_layout = QHBoxLayout()
-        self.restore_btn = QPushButton("Restaurar recomendados")
-        self.restore_btn.setToolTip("Define 0,90 / 0,90 / 0,50s (padrão seguro).")
+        # Confiança Mín. — Seios
+        breast_layout = QHBoxLayout()
+        breast_label = QLabel("Confiança Mín. — Seios (%):")
+        self.nsfw_breast_spin = QSpinBox()
+        self.nsfw_breast_spin.setRange(0, 100)
+        self.nsfw_breast_spin.setSingleStep(5)
+        self.nsfw_breast_spin.setValue(nsfw_breast)
+        self.nsfw_breast_spin.setToolTip(
+            "Certeza mínima para considerar 'seio feminino exposto'.\n"
+            "Valor alto evita confundir peitorais masculinos com seios.\n"
+            "0% = sem filtro extra. (Padrão: 60%)"
+        )
+        breast_layout.addWidget(breast_label)
+        breast_layout.addWidget(self.nsfw_breast_spin)
+        layout.addLayout(breast_layout)
+
+        # Confiança Mín. — Ânus
+        anus_layout = QHBoxLayout()
+        anus_label = QLabel("Confiança Mín. — Ânus (%):")
+        self.nsfw_anus_spin = QSpinBox()
+        self.nsfw_anus_spin.setRange(0, 100)
+        self.nsfw_anus_spin.setSingleStep(5)
+        self.nsfw_anus_spin.setValue(nsfw_anus)
+        self.nsfw_anus_spin.setToolTip(
+            "Certeza mínima para considerar 'ânus exposto'.\n"
+            "0% = sem filtro extra. (Padrão: 40%)"
+        )
+        anus_layout.addWidget(anus_label)
+        anus_layout.addWidget(self.nsfw_anus_spin)
+        layout.addLayout(anus_layout)
+
+        # Confiança Mín. — Genitálias
+        gen2_layout = QHBoxLayout()
+        gen2_label = QLabel("Confiança Mín. — Genitálias (%):")
+        self.nsfw_genitalia_spin = QSpinBox()
+        self.nsfw_genitalia_spin.setRange(0, 100)
+        self.nsfw_genitalia_spin.setSingleStep(5)
+        self.nsfw_genitalia_spin.setValue(nsfw_genitalia)
+        self.nsfw_genitalia_spin.setToolTip(
+            "Certeza mínima para considerar genitália exposta (masculina ou feminina).\n"
+            "0% = sem filtro extra, usa apenas a Sensibilidade Geral. (Padrão: 0%)"
+        )
+        gen2_layout.addWidget(gen2_label)
+        gen2_layout.addWidget(self.nsfw_genitalia_spin)
+        layout.addLayout(gen2_layout)
+
+        # Texto de ajuda NSFW
+        nsfw_help = QLabel(
+            "A IA verifica a tela e dá uma nota de certeza para cada parte.\n"
+            "Se a nota for maior que a Sensibilidade Geral, dispara a ação.\n"
+            "A Confiança Mínima filtra partes específicas antes da avaliação final."
+        )
+        nsfw_help.setWordWrap(True)
+        nsfw_help.setStyleSheet("color: #888; font-size: 11px; margin-top: 4px;")
+        layout.addWidget(nsfw_help)
+
+        # === BOTÕES ===
+        layout.addSpacing(8)
+        btn_layout = QHBoxLayout()
+        self.restore_btn = QPushButton("Restaurar padrão")
+        self.restore_btn.setToolTip("Restaura todos os valores recomendados.")
         self.restore_btn.clicked.connect(self._restore_recommended)
-        restore_layout.addWidget(self.restore_btn)
+        btn_layout.addWidget(self.restore_btn)
 
-        # Botões OK/Cancelar
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self._accept_and_emit)
         self.button_box.rejected.connect(self.reject)
-        restore_layout.addWidget(self.button_box)
-        layout.addLayout(restore_layout)
+        btn_layout.addWidget(self.button_box)
+        layout.addLayout(btn_layout)
 
     def _restore_recommended(self):
-        self.static_spin.setValue(self._recommended_static)
-        self.seq_spin.setValue(self._recommended_sequence)
-        self.interval_spin.setValue(self._recommended_interval)
+        self.static_spin.setValue(self._rec_static)
+        self.seq_spin.setValue(self._rec_sequence)
+        self.interval_spin.setValue(self._rec_interval)
+        self.nsfw_general_spin.setValue(self._rec_nsfw_general)
+        self.nsfw_breast_spin.setValue(self._rec_nsfw_breast)
+        self.nsfw_anus_spin.setValue(self._rec_nsfw_anus)
+        self.nsfw_genitalia_spin.setValue(self._rec_nsfw_genitalia)
 
     def _accept_and_emit(self):
-        self.thresholds_updated.emit(self.static_spin.value(), self.seq_spin.value(), self.interval_spin.value())
+        self.thresholds_updated.emit(
+            self.static_spin.value(),
+            self.seq_spin.value(),
+            self.interval_spin.value()
+        )
+        self.nsfw_thresholds_updated.emit(
+            self.nsfw_general_spin.value() / 100.0,
+            self.get_nsfw_min_confidence()
+        )
         self.accept()
 
     def get_thresholds(self):
         return self.static_spin.value(), self.seq_spin.value(), self.interval_spin.value()
 
+    def get_nsfw_min_confidence(self) -> dict:
+        result = {}
+        breast_val = self.nsfw_breast_spin.value() / 100.0
+        anus_val = self.nsfw_anus_spin.value() / 100.0
+        genitalia_val = self.nsfw_genitalia_spin.value() / 100.0
+        if breast_val > 0:
+            result['FEMALE_BREAST_EXPOSED'] = breast_val
+        if anus_val > 0:
+            result['ANUS_EXPOSED'] = anus_val
+        if genitalia_val > 0:
+            result['FEMALE_GENITALIA_EXPOSED'] = genitalia_val
+            result['MALE_GENITALIA_EXPOSED'] = genitalia_val
+        return result
+
     def accept(self):
-        # Emite o sinal com os valores atuais antes de fechar
-        self.thresholds_updated.emit(self.static_spin.value(), self.seq_spin.value(), self.interval_spin.value())
+        self.thresholds_updated.emit(
+            self.static_spin.value(),
+            self.seq_spin.value(),
+            self.interval_spin.value()
+        )
+        self.nsfw_thresholds_updated.emit(
+            self.nsfw_general_spin.value() / 100.0,
+            self.get_nsfw_min_confidence()
+        )
         super().accept()
