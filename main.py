@@ -1,5 +1,5 @@
 import sys
-import os
+
 import multiprocessing
 
 if __name__ == "__main__":
@@ -10,8 +10,7 @@ if __name__ == "__main__":
         run_worker()
         sys.exit(0)
 
-import numpy
-import cv2
+
 
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon
