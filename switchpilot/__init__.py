@@ -19,7 +19,7 @@ def _get_version():
             return f.read().strip()
     except (FileNotFoundError, IOError):
         # Fallback se o arquivo não existir
-        return "1.7.0"
+        return "1.7.1"
 
 
 __version__ = _get_version()

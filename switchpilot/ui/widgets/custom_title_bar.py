@@ -1,5 +1,4 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QSizePolicy, QMenuBar
-from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QIcon
 
 

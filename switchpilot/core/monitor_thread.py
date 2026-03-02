@@ -3,7 +3,7 @@ import cv2
 import mss
 import numpy as np
 import time
-import os  # Adicionado para os.path.basename em logs futuros
+
 
 
 # ============================================================================
@@ -92,7 +92,7 @@ class MonitorThread(QThread):
             if enabled and self.nsfw_detector.worker_process is None:
                 success = self.nsfw_detector.initialize()
                 if not success:
-                    self.log_signal.emit(f"[NSFW] Falha ao ativar: Engine ONNX não iniciou. Veja o log acima com detalhes do erro.", "error")
+                    self.log_signal.emit("[NSFW] Falha ao ativar: Engine ONNX não iniciou. Veja o log acima com detalhes do erro.", "error")
                     self.nsfw_detector.enabled = False
                     return
             self.nsfw_detector.enabled = enabled
@@ -184,9 +184,9 @@ class MonitorThread(QThread):
             (img[:-2, 2:], 4),   # top-right (bit 2)
             (img[1:-1, :-2], 8),  # left (bit 3)
             (img[1:-1, 2:], 16),  # right (bit 4)
-            (img[2: , :-2], 32),  # bottom-left (bit 5)
-            (img[2: , 1:-1], 64),  # bottom (bit 6)
-            (img[2: , 2:], 128)  # bottom-right (bit 7)
+            (img[2:, :-2], 32),  # bottom-left (bit 5)
+            (img[2:, 1:-1], 64),  # bottom (bit 6)
+            (img[2:, 2:], 128)  # bottom-right (bit 7)
         ]
         for neigh, bit in neighbors:
             codes |= ((neigh >= center).astype(np.uint8) * bit)
@@ -327,7 +327,7 @@ class MonitorThread(QThread):
 
         with mss.mss() as sct:
             while self.running:
-                start_cycle = time.time()
+                time.time()
 
                 captured_frame_bgr = None
                 try:

@@ -3,7 +3,7 @@ import json
 import uuid
 import base64
 import hashlib
-from PyQt5.QtCore import QSettings  # Para ler a senha como no código original por enquanto
+
 import time  # Adicionado para os sleeps nos testes
 
 
@@ -215,14 +215,14 @@ class OBSController:
         try:
             self._log(f"OBS (_send_request): Conectando a ws://{self.host}:{self.port}", "debug")
             ws = websocket.create_connection(f"ws://{self.host}:{self.port}", timeout=3)
-            self._log(f"OBS (_send_request): Conexão WebSocket criada.", "debug")
+            self._log("OBS (_send_request): Conexão WebSocket criada.", "debug")
 
             if not self._authenticate(ws):
                 self._log("OBS (_send_request): Autenticação FALHOU. Retornando None.", "error")
                 if ws:
                     ws.close()
                 return None
-            self._log(f"OBS (_send_request): Autenticação bem-sucedida.", "debug")
+            self._log("OBS (_send_request): Autenticação bem-sucedida.", "debug")
 
             request_id = str(uuid.uuid4())
             payload = {

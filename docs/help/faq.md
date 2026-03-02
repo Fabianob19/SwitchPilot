@@ -1,39 +1,22 @@
 # Perguntas Frequentes (FAQ)
 
-### ❓ O programa não detecta minha cena!
-**Verifique:**
-*   A **região de captura** está correta? (Menu Visualizar → Exibir Área de Captura).
-*   A **imagem de referência** é nítida? (Use PNG, evite compressão).
-*   O **limiar** está muito alto? (Tente baixar para 0.88-0.90).
-*   A fonte (janela/monitor) está visível?
+Aqui estão as dúvidas mais comuns sobre o uso do **SwitchPilot**.
 
-### ❓ A detecção está muito lenta!
-**Soluções:**
-*   **Reduza a área de captura**: Capture apenas um pedaço pequeno e único da tela (ex: o logo do canal), não a tela toda.
-*   **Aumente o intervalo**: Vá em Configurações → Limiar e mude para 0.8s ou 1.0s.
-*   Feche programas pesados em segundo plano.
+---
 
-### ❓ OBS não conecta!
-**Checklist:**
-1.  **WebSocket 5.x** está ativo no OBS? (Ferramentas → Configurações WebSocket).
-2.  A **porta** é a mesma? (Padrão 4455).
-3.  A **senha** está correta?
-4.  O OBS está aberto?
+### O SwitchPilot precisa de internet para funcionar?
+**Não!** O processamento de inteligência artificial (reconhecimento de imagem e NSFW) ocorre `100% localmente` na sua própria máquina (CPU/GPU). Isso garante privacidade absoluta e nenhum atraso de rede (lag).
 
-### ❓ vMix não responde!
-**Checklist:**
-1.  **Web Controller** ativado? (Configurações → Web Controller).
-2.  Porta correta (8088)?
-3.  **Nome da cena exato**? (Maiúsculas/minúsculas importam!).
+### Por que ele não reconhece a tela do meu OBS?
+Quando você captura a Região PGM usando o modo **Monitor**, certifique-se de que a janela do OBS (Preview) não ficará minimizada nem escondida atrás de outros programas pesados. Além disso, se o OBS estiver sendo executado como "Administrador", o SwitchPilot também precisará ser executado como "Administrador" para conseguir "ver" a tela dele.
 
-### ❓ Funciona com StreamLabs?
-*   **StreamLabs OBS (SLOBS)**: **SIM** ✅ (Usa a mesma API WebSocket do OBS).
-*   **StreamLabs Desktop**: **NÃO** ❌ (Não tem API compatível).
+### Qual o uso recomendado de CPU?
+Por padrão, o SwitchPilot consome muito pouco da CPU quando o monitoramento não está ativo.
+Ao clicar em **"Iniciar Monitoramento"**, ele passa a capturar e analisar várias imagens por segundo. 
+> Recomendamos um **Intervalo de Captura de 0.5s** nas opções de **Limiares** caso seu computador seja mais antigo.
 
-### ❓ Funciona com Twitch/YouTube?
-**SIM!** ✅ O SwitchPilot controla o seu software de transmissão (OBS/vMix). Não importa para onde você está transmitindo (Twitch, YouTube, Facebook, TikTok), ele vai funcionar.
+### Quantas imagens de referência posso adicionar?
+Você pode registrar **dezenas de imagens**. Porém, a cada ciclo (ex: meio segundo), a IA irá verificar **todas as suas imagens contra a sua tela**. Quanto mais imagens de referência, mais CPU/GPU ele precisará. Recomendamos manter de `3 a 10` imagens cruciais.
 
-### ❓ Preciso instalar o NDI?
-**NÃO** ❌. O NDI é opcional.
-*   Para capturar tela ou janelas normais, você **não** precisa do NDI.
-*   Instale apenas se você usa fontes de vídeo via rede NDI.
+### As funções automáticas não disparam no vMix
+Verifique se a opção `Web Controller` está ativa nas Configurações do vMix e não esqueça de configurar *a porta correta* (padrão é 8088). Tente apertar **Testar Conexão** no painel esquerdo; o log mostrará "Sucesso" se conseguir se conectar.

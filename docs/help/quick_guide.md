@@ -1,48 +1,29 @@
-# SwitchPilot - Guia Rápido
+# Guia Rápido - SwitchPilot
 
-## 🎯 INÍCIO RÁPIDO (5 PASSOS)
-
-1.  **Configure OBS/vMix**
-    *   **OBS**: Porta 4455, senha do WebSocket.
-    *   **vMix**: Porta 8088, ative Web Controller.
-
-2.  **Defina a Área de Captura**
-    *   Vá em **Gerenciador de Referências** → **Selecionar Região PGM**.
-    *   Desenhe a área da tela que o SwitchPilot deve "assistir".
-
-3.  **Adicione Imagens de Referência**
-    *   Clique em **Adicionar Referência**.
-    *   Selecione um print/imagem da cena que você quer detectar.
-
-4.  **Configure as Ações**
-    *   Duplo clique na referência criada.
-    *   Diga o que fazer quando ela for encontrada (ex: Mudar para Cena X no OBS).
-
-5.  **Inicie**
-    *   Clique em **Iniciar Monitoramento**.
-    *   O sistema fará tudo automaticamente!
+🚀 **Resumo de configuração em 5 passos rápidos:**
 
 ---
 
-## ⚙️ COMO FUNCIONA A DETECÇÃO
+### Passo 1: Conecte o SwitchPilot à sua Mesa de Corte
+Certifique-se de que o **OBS** ou **vMix** estejam abertos. 
+Preencha a porta e o IP nos painéis esquerdos e teste a conexão.
 
-*   **Captura**: O programa olha para a região definida em tempo real.
-*   **Comparação**: Compara o que vê com suas imagens de referência.
-*   **Score**: Calcula um score de similaridade (0.0 a 1.0).
-*   **Ação**: Se Score >= Limiar, a ação é executada.
+### Passo 2: Capture a Região Alvo
+Na aba central **Gerenciador de Referências**:
+* Clique em **Selecionar Região PGM**.
+* Marque o local na sua tela que contém a pré-visualização ou câmera que deseja analisar.
 
----
+### Passo 3: Cadastre a Referência
+* Clique em **Adicionar Referência...**.
+* Espere a cena desejada aparecer (ex: Rosto do Cantor).
+* Pressione a câmera 📸 e digite "Rosto Cantor".
 
-## 💡 DICAS RÁPIDAS
+### Passo 4: Defina o Atilho Automático
+* Volte à lista de referências, selecione "Rosto Cantor" e clique em **Configurar Ações da Selecionada**.
+* Adicione a ação. Exemplo: *Se ver o rosto do cantor, corte para o Input 5 no vMix*.
+* Confirme e clique OK.
 
-### Score
-*   **> 0.92**: Excelente. Detecção precisa.
-*   **< 0.85**: Ruim. Ajuste a iluminação ou mude a imagem de referência.
+### Passo 5: Inicie a IA
+* No painel de controle inferior, pressione **Iniciar Monitoramento**.
 
-### Limiar (Threshold)
-*   **Alto (0.93+)**: Muito preciso, mas pode falhar se houver pequenas mudanças.
-*   **Médio (0.88-0.92)**: **Recomendado**. Equilíbrio ideal.
-*   **Baixo (< 0.87)**: Muito sensível, risco de falsos positivos.
-
-### Performance
-*   **Intervalo 0.5s**: Recomendado. Bom equilíbrio entre rapidez e uso de CPU.
+> **Pronto!** A partir de agora, o SwitchPilot olhará sua tela continuamente e executará o corte sempre que a imagem do "Rosto Cantor" for encontrada.

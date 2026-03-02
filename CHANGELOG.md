@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-03-02
+### Added
+- **Ajuda NSFW**: Criação e injeção do guia detalhado sobre limites NSFW, mitigação CPU/GPU e falsos positivos.
+- **Temas**: Criação do tema super escuro (Very Dark / Pitch Black).
+
+### Changed
+- **Update Checker**: Verificador de atualizações reescrito visualmente com changelog renderizado em HTML moderno.
+- **Tema Claro**: Tema claro (Light Theme) reescrito do zero sob estética Tailwind pro-broadcast.
+
+### Fixed
+- **Help Center**: Central de ajuda reformulada usando barra CustomTitleBar responsiva sem travamentos do 'setSizePolicy'.
+
+---
+
 ## [1.7.0] - 2026-03-01
 ### Added
 - **NSFW Detection v11**: Motor de detecção NSFW customizado baseado em YOLOv8 (640m) com Engine ONNX própria.

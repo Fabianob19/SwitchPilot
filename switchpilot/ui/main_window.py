@@ -1,14 +1,13 @@
 import sys
 import os  # Adicionado para construir caminhos de tema
-import json
 import shutil
 import traceback
 import ctypes
 from ctypes import wintypes
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QDockWidget, QWidget,
-                             QVBoxLayout, QLabel, QTextEdit, QMenuBar, QStatusBar, QAction, QSizePolicy, QActionGroup, QTabBar, QSystemTrayIcon, QMenu, QStyle, QPushButton, QFileDialog, QMessageBox, QDialog, QDialogButtonBox)
-from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QColor, QDesktopServices
-from PyQt5.QtCore import Qt, QFile, QTextStream, QDir, QRect, QSettings, QTimer, QUrl, QPoint
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QTextEdit, QMenuBar, QStatusBar, QAction, QActionGroup, QSystemTrayIcon, QMenu, QStyle, QPushButton, QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QSplitter, QTabWidget, QGroupBox)
+from PyQt5.QtGui import QIcon, QPainter, QPen, QColor, QDesktopServices
+from PyQt5.QtCore import Qt, QRect, QTimer, QUrl, QPoint
 # Importar os widgets
 from switchpilot.ui.widgets.obs_config import OBSConfigWidget
 from switchpilot.ui.widgets.vmix_config import VMixConfigWidget
@@ -25,40 +24,45 @@ DEFAULT_WINDOW_WIDTH = 1200
 DEFAULT_WINDOW_HEIGHT = 700
 DEFAULT_WINDOW_X = 100
 DEFAULT_WINDOW_Y = 100
+MIN_WINDOW_WIDTH = 800
+MIN_WINDOW_HEIGHT = 500
 
 # --- Utilitário: Dark Title Bar no Windows ---
 
 
-def enable_dark_title_bar_for_window(widget):
+def enable_dark_title_bar_for_window(widget, dark_mode=True):
     try:
         if sys.platform != 'win32':
             return
         hwnd = int(widget.winId())
+        mode_val = 1 if dark_mode else 0
+        
         # Tentar preferências de app escuras via uxtheme (não documentado, mas comum)
         try:
             uxtheme = ctypes.WinDLL('uxtheme')
-            # SetPreferredAppMode(AllowDark=1)
+            # SetPreferredAppMode(AllowDark=1, ForceDark=2, ForceLight=3)
             try:
                 SetPreferredAppMode = uxtheme.SetPreferredAppMode
                 SetPreferredAppMode.argtypes = [ctypes.c_int]
                 SetPreferredAppMode.restype = ctypes.c_int
-                SetPreferredAppMode(1)
+                SetPreferredAppMode(2 if dark_mode else 3)
             except Exception:
                 pass
-            # AllowDarkModeForWindow(hwnd, TRUE)
+            # AllowDarkModeForWindow(hwnd, TRUE/FALSE)
             try:
                 from ctypes import wintypes as _wt
                 AllowDarkModeForWindow = uxtheme.AllowDarkModeForWindow
                 AllowDarkModeForWindow.argtypes = [_wt.HWND, _wt.BOOL]
                 AllowDarkModeForWindow.restype = _wt.BOOL
-                AllowDarkModeForWindow(hwnd, True)
+                AllowDarkModeForWindow(hwnd, bool(dark_mode))
             except Exception:
                 pass
         except Exception:
             pass
+
         # DWM attribute (Win10 1809+/Win11)
         DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-        value = ctypes.c_int(1)
+        value = ctypes.c_int(mode_val)
         dwmapi = ctypes.WinDLL('dwmapi')
         DwmSetWindowAttribute = dwmapi.DwmSetWindowAttribute
         DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, wintypes.LPCVOID, wintypes.DWORD]
@@ -96,7 +100,6 @@ class CaptureAreaOverlay(QWidget):
 
     def _update_geometry(self):
         import mss
-        import pyautogui
         if self.kind == 'monitor':
             with mss.mss() as sct:
                 monitor = sct.monitors[self.capture_id]
@@ -146,7 +149,7 @@ class MainWindow(QMainWindow):
         self._loading_settings = False  # Flag para evitar auto-save durante carregamento
 
         # Carregar tema padrão inicial (ou o último salvo no futuro)
-        self.current_theme_name = THEME_VERY_DARK
+        self.current_theme_name = THEME_DARK_DEFAULT
         self._apply_theme_qss(self.current_theme_name)
         self._setup_ui()
         self._create_tray_icon()  # Configurar o ícone da bandeja
@@ -177,10 +180,21 @@ class MainWindow(QMainWindow):
                 y = DEFAULT_WINDOW_Y
 
             self.setGeometry(x, y, width, height)
+            self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
             print(f"Configurações da janela carregadas: {width}x{height} na posição ({x}, {y})")
         except Exception as e:
             print(f"Erro ao carregar configurações da janela: {e}")
-            self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+            # Scale to 80% of current screen
+            try:
+                screen = QApplication.primaryScreen().geometry()
+                w = min(DEFAULT_WINDOW_WIDTH, int(screen.width() * 0.8))
+                h = min(DEFAULT_WINDOW_HEIGHT, int(screen.height() * 0.8))
+                x = (screen.width() - w) // 2
+                y = (screen.height() - h) // 2
+                self.setGeometry(x, y, w, h)
+            except Exception:
+                self.setGeometry(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+            self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
 
     def _init_autosave_timer(self):
         """Inicializa timer para auto-save de configurações."""
@@ -290,7 +304,7 @@ class MainWindow(QMainWindow):
         """Restaura TODAS as configurações salvas nos widgets."""
         self._loading_settings = True  # Bloquear auto-save durante carregamento
         try:
-            config = self.config_manager._config
+            self.config_manager._config
 
             # 1. OBS
             if hasattr(self, 'obs_config_widget') and self.obs_config_widget:
@@ -667,103 +681,64 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[WARN] Falha ao aplicar barra personalizada: {e}")
 
-        self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowNestedDocks | QMainWindow.AllowTabbedDocks)
+        # --- ESTRUTURA DE LAYOUT MODERNA (QSplitter) ---
+        # Substitui os QDockWidgets por um layout limpo de painéis divididos
+        
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(8)
 
-        obs_config_dock = QDockWidget("Configuração OBS", self)
-        obs_config_dock.setObjectName("obsConfigDock")
+        # Splitter Vertical (Top: Config/Refs, Bottom: Monitoring)
+        self.main_v_splitter = QSplitter(Qt.Vertical)
+        
+        # Splitter Horizontal (Left: Config, Right: Refs)
+        self.top_h_splitter = QSplitter(Qt.Horizontal)
+
+        # 1. Config Tabs (OBS + vMix)
+        self.config_tabs = QTabWidget()
+        self.config_tabs.setObjectName("configTabs")
+        
         self.obs_config_widget = OBSConfigWidget()
         self.obs_config_widget.config_changed.connect(self._on_obs_config_changed)
-        obs_config_dock.setWidget(self.obs_config_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, obs_config_dock)
-        view_menu.addAction(obs_config_dock.toggleViewAction())
+        self.config_tabs.addTab(self.obs_config_widget, "Configuração OBS")
 
-        vmix_config_dock = QDockWidget("Configuração vMix", self)
-        vmix_config_dock.setObjectName("vmixConfigDock")
         self.vmix_config_widget = VMixConfigWidget()
         self.vmix_config_widget.config_changed.connect(self._on_vmix_config_changed)
-        vmix_config_dock.setWidget(self.vmix_config_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, vmix_config_dock)
-        view_menu.addAction(vmix_config_dock.toggleViewAction())
+        self.config_tabs.addTab(self.vmix_config_widget, "Configuração vMix")
+        
+        self.top_h_splitter.addWidget(self.config_tabs)
 
-        self.tabifyDockWidget(obs_config_dock, vmix_config_dock)
-        obs_config_dock.raise_()
-
-        # Tentar encontrar e nomear o QTabBar dos docks tabificados
-        try:
-            # Os QDockWidgets são agrupados em um QMainWindowPrivate::DockAreaTabBar
-            # que é um QTabBar. Vamos procurar por QTabBar que são filhos diretos
-            # de um contêiner de dock ou da própria QMainWindow.
-            # Isso pode ser um pouco frágil dependendo da implementação interna do Qt.
-
-            found_dock_tab_bar = False
-            # É importante importar QTabBar se ainda não estiver no escopo local
-            from PyQt5.QtWidgets import QTabBar
-
-            for tab_bar in self.findChildren(QTabBar):
-                parent_widget = tab_bar.parentWidget()
-                # print(f"DEBUG: Encontrado QTabBar: {tab_bar}, Parent: {parent_widget}, Parent type: {type(parent_widget)}")
-
-                is_likely_dock_tab_bar = False
-                if parent_widget:
-                    parent_class_name = parent_widget.metaObject().className()
-                    # print(f"DEBUG: Parent class name: {parent_class_name}")
-                    # Verificamos se o pai é um QDockWidget (quando apenas um dock está na área, antes de ser tabificado com outro)
-                    # ou se é uma área de dock interna. A classe 'QMainWindowDockArea' não é exposta diretamente em PyQt.
-                    # A classe 'DockAreaTabBar' também é interna.
-                    # Uma heurística é verificar se o pai NÃO é um QTabWidget (para não pegar tab bars de QTabWidgets comuns)
-                    # e se o tab_bar está diretamente sob a QMainWindow ou um widget genérico que serve de container para docks.
-                    if not isinstance(parent_widget, QTextEdit) and not isinstance(parent_widget, QLabel):  # Evitar pegar QTabBar de widgets que não são containers de dock
-                        # Se o parent_widget for um QDockWidget, significa que o QTabBar é o título do próprio dock,
-                        # o que não é o que queremos aqui (já é estilizado por QDockWidget::title).
-                        # O QTabBar que gerencia múltiplos docks agrupados geralmente não tem um QDockWidget como pai direto.
-                        # Ele é filho de um widget interno da QMainWindow.
-                        # Vamos tentar uma verificação mais simples: se o parent não é um QTabWidget e
-                        # se este tab_bar tem um número de abas correspondente aos docks que acabamos de agrupar (2 neste caso)
-                        # e não é um QTabBar que já tem um objectName (para evitar re-nomear multiplas vezes).
-                        if not parent_widget.metaObject().className() == "QTabWidget" and tab_bar.objectName() == "":
-                            # Esta é a verificação mais crítica:
-                            # O QTabBar dos docks tabificados geralmente NÃO é filho direto dos QDockWidgets.
-                            # Ele é filho de um widget interno da QMainWindow (frequentemente um QAbstractScrollArea ou similar,
-                            # ou um widget privado como QMainWindowDockArea).
-                            # Vamos assumir que o primeiro QTabBar sem nome de objeto e que não é de um QTabWidget é o candidato.
-                            # Para o nosso caso específico, após tabifyDockWidget(obs_config_dock, vmix_config_dock),
-                            # deve haver um QTabBar gerenciando estas duas abas.
-
-                            # Verificando os filhos da QMainWindow
-                            if parent_widget == self or parent_widget.parentWidget() == self:  # Um pouco mais direto
-                                tab_bar.setObjectName("CentralDockTabBar")
-                                print(f"DEBUG: QTabBar dos docks (possivelmente) encontrado e nomeado 'CentralDockTabBar': {tab_bar} com pai {parent_widget}")
-                                self._apply_theme_qss(self.current_theme_name)
-                                found_dock_tab_bar = True
-                                break
-                            else:  # Tentar uma busca mais genérica se a anterior falhar
-                                # Se o QTabBar não tem um QTabWidget como pai, é um bom candidato
-                                if tab_bar.parentWidget() and tab_bar.parentWidget().metaObject().className() != "QTabWidget":
-                                    tab_bar.setObjectName("CentralDockTabBar")
-                                    print(f"DEBUG: QTabBar dos docks (heurística genérica) encontrado e nomeado 'CentralDockTabBar': {tab_bar} com pai {parent_widget}")
-                                    self._apply_theme_qss(self.current_theme_name)
-                                    found_dock_tab_bar = True
-                                    break
-
-            if not found_dock_tab_bar:
-                print("DEBUG: QTabBar dos docks não foi encontrado programaticamente com as heurísticas atuais.")
-
-        except Exception as e:
-            print(f"DEBUG: Erro ao tentar encontrar/nomear QTabBar dos docks: {e}")
-
-        self.reference_manager_dock_widget = QDockWidget("Gerenciador de Referências", self)
-        self.reference_manager_dock_widget.setObjectName("referenceManagerDock")
+        # 2. Reference Manager
         self.reference_manager_widget = ReferenceManagerWidget(main_controller=None)
-        self.reference_manager_dock_widget.setWidget(self.reference_manager_widget)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.reference_manager_dock_widget)
-        view_menu.addAction(self.reference_manager_dock_widget.toggleViewAction())
+        
+        ref_group = QGroupBox("Gerenciador de Referências")
+        ref_layout = QVBoxLayout(ref_group)
+        ref_layout.setContentsMargins(4, 12, 4, 4)
+        ref_layout.addWidget(self.reference_manager_widget)
+        
+        self.top_h_splitter.addWidget(ref_group)
+        
+        # Set proportions for top splitter
+        self.top_h_splitter.setSizes([350, 650])
+        
+        self.main_v_splitter.addWidget(self.top_h_splitter)
 
-        self.monitoring_control_dock_panel = QDockWidget("Monitoramento & Controle", self)
-        self.monitoring_control_dock_panel.setObjectName("monitoringControlDock")
-        self.monitoring_control_widget = MonitoringControlWidget(self.monitoring_control_dock_panel)
-        self.monitoring_control_dock_panel.setWidget(self.monitoring_control_widget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.monitoring_control_dock_panel)
-        view_menu.addAction(self.monitoring_control_dock_panel.toggleViewAction())
+        # 3. Monitoring Control
+        self.monitoring_control_widget = MonitoringControlWidget(self)
+        
+        mon_group = QGroupBox("Monitoramento & Controle")
+        mon_layout = QVBoxLayout(mon_group)
+        mon_layout.setContentsMargins(4, 12, 4, 4)
+        mon_layout.addWidget(self.monitoring_control_widget)
+        
+        self.main_v_splitter.addWidget(mon_group)
+        
+        # Set proportions for main vertical splitter
+        self.main_v_splitter.setSizes([500, 200])
+        
+        main_layout.addWidget(self.main_v_splitter)
 
         # Garante que o MainController use sempre a instância correta do MonitoringControlWidget
         if hasattr(self, 'main_controller') and self.main_controller:
@@ -779,16 +754,10 @@ class MainWindow(QMainWindow):
 
         # Restaurar layout padrão
         view_menu.addSeparator()
-        self.restore_layout_action = QAction("Restaurar Layout Padrão", self)
+        self.restore_layout_action = QAction("Restaurar Proporções Padrão", self)
         self.restore_layout_action.triggered.connect(self._restore_default_layout)
         self.restore_layout_action.setShortcut("Ctrl+R")
         view_menu.addAction(self.restore_layout_action)
-
-        # Salva estado inicial do layout para restauração futura
-        try:
-            self._default_dock_state = self.saveState()
-        except Exception:
-            self._default_dock_state = None
 
     def _on_theme_selected(self, theme_name):
         if self._apply_theme_qss(theme_name):
@@ -1182,7 +1151,7 @@ class MainWindow(QMainWindow):
             if response.status_code == 200:
                 data = response.json()
                 latest_version = data.get('tag_name', 'Desconhecido')
-                release_name = data.get('name', '')
+                data.get('name', '')
                 release_body = data.get('body', 'Sem descrição.')
                 release_url = data.get('html_url', '')
                 published_at = data.get('published_at', '')
@@ -1201,51 +1170,93 @@ class MainWindow(QMainWindow):
                     update_status = "✅ VOCÊ ESTÁ ATUALIZADO!"
                     update_msg = "Você está usando a versão mais recente."
 
-                text = (
-                    "═══════════════════════════════════════════════════════════════════\n"
-                    "                      VERIFICAR ATUALIZAÇÕES\n"
-                    "═══════════════════════════════════════════════════════════════════\n\n"
+                import markdown
+                from PyQt5.QtWidgets import QTextBrowser
 
-                    f"{update_status}\n\n"
-                    f"   Versão Atual:         {current_version}\n"
-                    f"   Última Versão:        {latest_version}\n"
-                    f"   Publicado em:         {published_at[:10] if published_at else 'N/A'}\n\n"
+                is_light = self.current_theme_name == "modern_light.qss"
+                bg_color = "#f4f5f7" if is_light else "#1a1d23"
+                text_color = "#1f2937" if is_light else "#e5e9f0"
+                accent_color = "#2563eb" if is_light else "#88c0d0"
+                border_color = "#e5e7eb" if is_light else "#3e4553"
+                card_bg = "#ffffff" if is_light else "#22262e"
 
-                    f"{update_msg}\n\n"
+                html_css = f"""
+                <style>
+                    body {{ font-family: 'Segoe UI', sans-serif; color: {text_color}; background-color: {bg_color}; padding: 10px; }}
+                    h1, h2, h3 {{ color: {accent_color}; border-bottom: 1px solid {border_color}; padding-bottom: 5px; margin-top: 15px; margin-bottom: 10px; }}
+                    p, li {{ font-size: 14px; line-height: 1.6; margin-bottom: 10px; }}
+                    code {{ background-color: {card_bg}; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; border: 1px solid {border_color}; }}
+                    pre {{ background-color: {card_bg}; padding: 10px; border-radius: 6px; border: 1px solid {border_color}; overflow: auto; }}
+                    pre code {{ border: none; padding: 0; background: transparent; }}
+                    .status-box {{ background-color: {card_bg}; border-left: 4px solid {accent_color}; padding: 15px; margin-bottom: 20px; border-radius: 4px; }}
+                    .status-title {{ font-weight: bold; font-size: 16px; margin-bottom: 10px; color: {accent_color}; }}
+                    .info-grid {{ margin-top: 5px; }}
+                </style>
+                """
 
-                    "───────────────────────────────────────────────────────────────────\n\n"
+                # Converter o corpo do release (Markdown) para HTML formatado
+                changelog_html = markdown.markdown(release_body, extensions=['fenced_code', 'tables'])
 
-                    f"📋 CHANGELOG DA VERSÃO {latest_version}\n\n"
-                    f"{release_body[:500]}...\n\n"
-
-                    "───────────────────────────────────────────────────────────────────\n\n"
-
-                    "💾 COMO ATUALIZAR\n\n"
-                    "   1. Acesse a página de releases no GitHub\n"
-                    "   2. Baixe o instalador da versão mais recente\n"
-                    "   3. Execute o instalador\n"
-                    "   4. Suas configurações serão mantidas\n\n"
-
-                    "═══════════════════════════════════════════════════════════════════"
-                )
+                content_html = f"""
+                <html>
+                <head>{html_css}</head>
+                <body>
+                    <div class="status-box">
+                        <div class="status-title">{update_status}</div>
+                        <div class="info-grid">
+                            <strong>Versão Atual:</strong> {current_version}<br>
+                            <strong>Última Versão:</strong> {latest_version}<br>
+                            <strong>Publicado em:</strong> {published_at[:10] if published_at else 'N/A'}<br>
+                            <br>
+                            {update_msg}
+                        </div>
+                    </div>
+                    <h3>📋 Changelog da Versão {latest_version}</h3>
+                    <div class="changelog">
+                        {changelog_html}
+                    </div>
+                    <h3>💾 Como Atualizar</h3>
+                    <ol>
+                        <li>Acesse a página de releases no GitHub usando o botão abaixo.</li>
+                        <li>Baixe e execute o instalador da versão mais recente.</li>
+                        <li>Suas configurações e referências ficarão salvas automaticamente!</li>
+                    </ol>
+                </body>
+                </html>
+                """
 
                 dlg = QDialog(self)
                 dlg.setWindowTitle("Verificar Atualizações")
-                dlg.setWindowFlags(dlg.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-                enable_dark_title_bar_for_window(dlg)
-                layout = QVBoxLayout(dlg)
+                dlg.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+                dlg.resize(800, 600)
 
-                te = QTextEdit(dlg)
-                te.setReadOnly(True)
-                te.setPlainText(text)
-                te.setStyleSheet("QTextEdit { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; }")
-                layout.addWidget(te)
+                layout = QVBoxLayout(dlg)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+
+                # Custom Title Bar
+                title_bar = CustomTitleBar(dlg, None)
+                title_bar.btn_min.hide()
+                title_bar.btn_max.hide()
+                layout.addWidget(title_bar)
+
+                content_widget = QWidget()
+                content_layout = QVBoxLayout(content_widget)
+                content_layout.setContentsMargins(15, 15, 15, 15)
+                layout.addWidget(content_widget)
+
+                # Browser HTML
+                tb = QTextBrowser(dlg)
+                tb.setOpenExternalLinks(True)
+                tb.setHtml(content_html)
+                content_layout.addWidget(tb)
 
                 # Botões
                 btn_layout = QHBoxLayout()
 
-                if latest_version.replace('v', '') > current_version.replace('v', ''):
+                if latest_ver > current_ver:
                     download_btn = QPushButton("📥 Baixar Atualização")
+                    download_btn.setObjectName("primaryButton")
                     download_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(release_url)))
                     btn_layout.addWidget(download_btn)
 
@@ -1257,9 +1268,8 @@ class MainWindow(QMainWindow):
                 close_btn.clicked.connect(dlg.close)
                 btn_layout.addWidget(close_btn)
 
-                layout.addLayout(btn_layout)
+                content_layout.addLayout(btn_layout)
 
-                dlg.resize(850, 600)
                 dlg.exec_()
 
         except requests.exceptions.RequestException:
@@ -1428,7 +1438,6 @@ class MainWindow(QMainWindow):
         try:
             if sys.platform == 'win32':
                 import ctypes
-                from ctypes import wintypes
                 msg = ctypes.wintypes.MSG.from_address(message.__int__())
                 WM_NCHITTEST = 0x0084
                 if msg.message == WM_NCHITTEST:
@@ -1517,8 +1526,13 @@ if __name__ == '__main__':
             self.vmix_controller = None
             print("MockMainController instanciado para teste da UI.")
 
-        def check_obs_connection(self): print("Mock OBS check"); return False, "Não conectado"
-        def check_vmix_connection(self): print("Mock vMix check"); return False, "Não conectado"
+        def check_obs_connection(self):
+            print("Mock OBS check")
+            return False, "Não conectado"
+
+        def check_vmix_connection(self):
+            print("Mock vMix check")
+            return False, "Não conectado"
 
     mock_controller = MockMainController()
     main_win.set_main_controller_for_widgets(mock_controller)

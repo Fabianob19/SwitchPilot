@@ -4,13 +4,10 @@ NDI Controller para SwitchPilot
 Controlador para captura de fontes NDI com tratamento correto de arrays NumPy
 """
 
-import sys
-import os
 import time
 import numpy as np
-import cv2
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, List, Dict, Any
 
 try:
     import NDIlib as NDI
@@ -20,7 +17,7 @@ except ImportError:
     NDI = None
 
 # PyQt5 imports for thread-safe operations
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
 class NDIDiscoveryWorker(QThread):

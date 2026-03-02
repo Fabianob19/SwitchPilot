@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                             QLabel, QPlainTextEdit, QSizePolicy, QFrame, QSpacerItem, QDoubleSpinBox, QCheckBox, QFileDialog)
-from PyQt5.QtCore import Qt, pyqtSignal, QDateTime, QTimer
-from PyQt5.QtGui import QColor, QTextCursor, QFont
+from PyQt5.QtWidgets import (QVBoxLayout, QTextEdit, QHBoxLayout, QPushButton, QApplication, QLabel,
+                             QPlainTextEdit, QSizePolicy, QFrame, QCheckBox, QFileDialog)
+from PyQt5.QtCore import pyqtSignal, QTimer
+from PyQt5.QtGui import QFont
 
 
 class MonitoringControlWidget(QFrame):
@@ -29,10 +29,12 @@ class MonitoringControlWidget(QFrame):
         controls_layout = QHBoxLayout(controls_frame)
 
         self.start_button = QPushButton("Iniciar Monitoramento")
+        self.start_button.setObjectName("startButton")
         self.start_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaPlay", None)))  # Ícone de Play
         self.start_button.setStyleSheet("padding: 5px;")
 
         self.stop_button = QPushButton("Parar Monitoramento")
+        self.stop_button.setObjectName("stopButton")
         self.stop_button.setIcon(self.style().standardIcon(getattr(self.style(), "SP_MediaStop", None)))  # Ícone de Stop
         self.stop_button.setStyleSheet("padding: 5px;")
         self.stop_button.setEnabled(False)
@@ -48,11 +50,13 @@ class MonitoringControlWidget(QFrame):
         status_layout.setContentsMargins(5, 2, 5, 2)
 
         self.status_indicator = QLabel()
-        self.status_indicator.setFixedSize(20, 20)
-        self.status_indicator.setStyleSheet("background-color: grey;")
+        self.status_indicator.setFixedSize(12, 12)
+        self.status_indicator.setStyleSheet(
+            "background-color: #4a5060; border-radius: 6px; border: 1px solid #3e4553;"
+        )
 
         self.status_label = QLabel("Status: Parado")
-        self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #d8dee9;")
+        self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #a0a8b6;")
         status_layout.addWidget(self.status_indicator)
         status_layout.addWidget(self.status_label)
         main_layout.addLayout(status_layout)
@@ -75,7 +79,7 @@ class MonitoringControlWidget(QFrame):
         self.filter_debug = QCheckBox("Debug")
         self.filter_debug.setChecked(False)
         for cb in [self.filter_info, self.filter_success, self.filter_warning, self.filter_error, self.filter_debug]:
-            cb.setStyleSheet("QCheckBox { font-size: 9pt; color: #bbb; } QCheckBox::indicator { width: 12px; height: 12px; }")
+            cb.setObjectName("logFilter")
             filter_layout.addWidget(cb)
         filter_layout.addStretch()
         log_panel_layout.addLayout(filter_layout)
@@ -84,7 +88,7 @@ class MonitoringControlWidget(QFrame):
         self.log_text = QPlainTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setFont(QFont("Consolas", 9))
-        self.log_text.setStyleSheet("background-color: #232323; color: #cccccc; border: 1px solid #333; border-radius: 4px;")
+        self.log_text.setObjectName("logConsole")
         self.log_text.setMaximumBlockCount(2000)
         log_panel_layout.addWidget(self.log_text)
 
@@ -95,7 +99,7 @@ class MonitoringControlWidget(QFrame):
         self.btn_save = QPushButton("Salvar")
         for btn in [self.btn_clear, self.btn_copy, self.btn_save]:
             btn.setFixedHeight(22)
-            btn.setStyleSheet("QPushButton { font-size: 9pt; padding: 2px 10px; border-radius: 4px; background: #333; color: #bbb; border: 1px solid #444; } QPushButton:hover { background: #444; color: #fff; }")
+            btn.setObjectName("logButton")
             btn_layout.addWidget(btn)
         btn_layout.addStretch()
         log_panel_layout.addLayout(btn_layout)
@@ -207,7 +211,9 @@ class MonitoringControlWidget(QFrame):
         # Proteção para status_indicator
         if hasattr(self, 'status_indicator') and self.status_indicator is not None:
             try:
-                self.status_indicator.setStyleSheet("background-color: green;")
+                self.status_indicator.setStyleSheet(
+                    "background-color: #a3be8c; border-radius: 6px; border: 1px solid #a3be8c;"
+                )
             except RuntimeError:
                 return
         else:
@@ -223,7 +229,9 @@ class MonitoringControlWidget(QFrame):
         # Proteção para status_indicator
         if hasattr(self, 'status_indicator') and self.status_indicator is not None:
             try:
-                self.status_indicator.setStyleSheet("background-color: grey;")
+                self.status_indicator.setStyleSheet(
+                    "background-color: #4a5060; border-radius: 6px; border: 1px solid #3e4553;"
+                )
             except RuntimeError:
                 return
         else:
@@ -255,7 +263,7 @@ class MonitoringControlWidget(QFrame):
         elif "Ativo" in message or "Iniciando" in message:
             self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #a3be8c;")  # Verde
         else:  # Parado, etc.
-            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #d8dee9;")  # Normal
+            self.status_label.setStyleSheet("font-weight: bold; padding: 3px; color: #a0a8b6;")
 
     def add_log_message(self, message, level="info"):
         self._log_buffer.append((level, message))
@@ -352,7 +360,6 @@ class MonitoringControlWidget(QFrame):
 
 # Para teste individual do widget
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
     import sys
     app = QApplication(sys.argv)
     try:
@@ -374,7 +381,6 @@ if __name__ == '__main__':
         widget.update_status("Testando Status Ativo")
         widget.monitoring_started()
 
-    from PyQt5.QtCore import QTimer
-    QTimer.singleShot(2000, test_slots)  # Chamar após 2 segundos
+        QTimer.singleShot(2000, test_slots)  # Chamar após 2 segundos
 
     sys.exit(app.exec_())

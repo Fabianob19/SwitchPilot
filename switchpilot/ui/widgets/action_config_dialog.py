@@ -6,8 +6,7 @@ from PyQt5.QtCore import Qt
 class ActionConfigDialog(QDialog):
     def __init__(self, reference_data, main_controller, parent=None):
         super().__init__(parent)
-        # Remover botão de ajuda ('?') do título
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
         self.reference_data = reference_data
         self.main_controller = main_controller
 
@@ -27,13 +26,25 @@ class ActionConfigDialog(QDialog):
             self._prepare_for_new_action_creation()
 
     def _setup_ui(self):
-        final_dialog_layout = QVBoxLayout()
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
+        self.title_bar = CustomTitleBar(self, None, height=32)
+        self.title_bar.btn_min.hide()
+        self.title_bar.btn_max.hide()
+        main_layout.addWidget(self.title_bar)
+
+        content_container = QWidget(self)
+        final_dialog_layout = QVBoxLayout(content_container)
         columns_layout = QHBoxLayout()
 
         left_column_layout = QVBoxLayout()
         list_management_frame = QFrame()
         list_management_layout = QVBoxLayout(list_management_frame)
         list_label = QLabel("Ações Configuradas:")
+        list_label.setProperty("heading", True)
         list_management_layout.addWidget(list_label)
         self.actions_list_widget = QListWidget()
         self.actions_list_widget.setMinimumWidth(250)
@@ -41,6 +52,7 @@ class ActionConfigDialog(QDialog):
         action_buttons_layout = QHBoxLayout()
         self.add_action_button = QPushButton("Adicionar Nova")
         self.remove_action_button = QPushButton("Remover Selecionada")
+        self.remove_action_button.setObjectName("removeButton")
         self.remove_action_button.setEnabled(False)
         action_buttons_layout.addWidget(self.add_action_button)
         action_buttons_layout.addWidget(self.remove_action_button)
@@ -71,6 +83,7 @@ class ActionConfigDialog(QDialog):
         right_column_layout.addWidget(self.params_frame)
         right_column_layout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Expanding))
         self.save_current_action_button = QPushButton("Aplicar Mudanças à Ação")
+        self.save_current_action_button.setObjectName("primaryButton")
         self.save_current_action_button.setEnabled(False)
         right_column_layout.addWidget(self.save_current_action_button)
         columns_layout.addLayout(right_column_layout, 2)
@@ -78,7 +91,7 @@ class ActionConfigDialog(QDialog):
         final_dialog_layout.addLayout(columns_layout)
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         final_dialog_layout.addWidget(self.button_box)
-        self.setLayout(final_dialog_layout)
+        main_layout.addWidget(content_container)
 
         self.button_box.accepted.connect(self._on_dialog_accept)
         self.button_box.rejected.connect(self.reject)
@@ -125,7 +138,7 @@ class ActionConfigDialog(QDialog):
                             except Exception:
                                 pass  # Stick to fallback
                         param_summary.append(input_name_display)
-                    elif 'input' in params :  # Fallback for older or generic "input" param if input_key is not used/present
+                    elif 'input' in params:  # Fallback for older or generic "input" param if input_key is not used/present
                         param_summary.append(f"Input: '{params['input']}'")
 
                     if 'mix_index' in params:
@@ -142,9 +155,9 @@ class ActionConfigDialog(QDialog):
                 if 'function_name' in params:
                     param_summary.append(f"Func: '{params['function_name']}'")
                 # Add other vMix specific params to summary if needed
-                if 'selected_name' in params :
+                if 'selected_name' in params:
                     param_summary.append(f"Campo: '{params['selected_name']}'")
-                if 'text_value' in params :
+                if 'text_value' in params:
                     param_summary.append(f"Valor: '{params['text_value'][:20]}...'")
 
                 if param_summary:
@@ -248,7 +261,7 @@ class ActionConfigDialog(QDialog):
             return
 
         self._load_actions_into_list_widget()
-        if self.current_editing_action_index >= 0 :
+        if self.current_editing_action_index >= 0:
             self.actions_list_widget.setCurrentRow(self.current_editing_action_index)
 
         self.save_current_action_button.setEnabled(True)
@@ -395,13 +408,13 @@ class ActionConfigDialog(QDialog):
                 self._add_param_control("Enviar para Mix:", mix_combo)
 
             elif action_name == "Cut":
-                print(f"DEBUG: vMix Cut action selected. Creating controls.")  # DEBUG
+                print("DEBUG: vMix Cut action selected. Creating controls.")  # DEBUG
                 input_combo = QComboBox()
                 input_combo.setObjectName("param_vmix_input_for_cut")
                 self._populate_vmix_inputs_combo(input_combo, add_none_option=True)
                 self._add_param_control("Input Alvo (Opcional):", input_combo)
 
-                print(f"DEBUG: vMix Cut - Adding mix_combo...")  # DEBUG
+                print("DEBUG: vMix Cut - Adding mix_combo...")  # DEBUG
                 mix_combo = QComboBox()
                 mix_combo.setObjectName("param_mix_index")
                 mix_combo.addItem("Program (Mix 1)", 1)
@@ -410,7 +423,7 @@ class ActionConfigDialog(QDialog):
                 mix_combo.addItem("Mix 3", 3)
                 mix_combo.addItem("Mix 4", 4)
                 self._add_param_control("Enviar para Mix:", mix_combo)
-                print(f"DEBUG: vMix Cut - mix_combo added to layout attempt.")  # DEBUG
+                print("DEBUG: vMix Cut - mix_combo added to layout attempt.")  # DEBUG
 
             elif action_name == "OverlayInputIn":
                 overlay_channel_edit = QLineEdit()
@@ -490,7 +503,7 @@ class ActionConfigDialog(QDialog):
                 else:
                     combo_box.addItem("Nenhuma cena encontrada")
                     combo_box.setEnabled(False)
-            except Exception as e:
+            except Exception:
                 combo_box.addItem("Erro ao carregar cenas")
                 combo_box.setEnabled(False)
         else:
@@ -507,7 +520,7 @@ class ActionConfigDialog(QDialog):
                 else:
                     combo_box.addItem(f"Nenhum input {'do tipo ' + input_kind if input_kind else ''} encontrado")
                     combo_box.setEnabled(False)
-            except Exception as e:
+            except Exception:
                 combo_box.addItem("Erro ao carregar inputs")
                 combo_box.setEnabled(False)
         else:
@@ -530,7 +543,7 @@ class ActionConfigDialog(QDialog):
                     combo_box.addItems(items)
                 else:
                     combo_box.addItem(f"Nenhum item em '{scene_name}'")
-            except Exception as e:
+            except Exception:
                 combo_box.addItem("Erro ao carregar itens")
                 combo_box.setEnabled(False)
         else:
@@ -812,7 +825,7 @@ class ActionConfigDialog(QDialog):
             # mas é preciso cuidado se add_none_option = True.
             # Se add_none_option e inputs estiver vazio, count será 1.
             # Se add_none_option e inputs não estiver vazio, count > 1.
-            if combo_box.count() == 0 :  # Se absolutamente nada foi adicionado
+            if combo_box.count() == 0:  # Se absolutamente nada foi adicionado
                 combo_box.addItem("Falha ao carregar inputs", None)
                 combo_box.setEnabled(False)
             elif combo_box.count() == 1 and add_none_option and combo_box.itemData(0) is None:  # Apenas "Nenhum"

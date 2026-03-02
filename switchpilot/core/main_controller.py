@@ -1,9 +1,4 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-import cv2
-import numpy as np
-import mss
-import pyautogui
-import os
 from switchpilot.integrations.obs_controller import OBSController
 from switchpilot.integrations.vmix_controller import VMixController
 from .monitor_thread import MonitorThread
@@ -88,7 +83,7 @@ class MainController(QObject):
     def _update_obs_controller_settings(self):
         if not self.obs_config_widget or not self.obs_controller:
             level = "warning" if self.obs_config_widget else "error"
-            self._log_internal(f"OBSConfigWidget ou OBSController não disponível/inicializado. Não é possível atualizar config.", level)
+            self._log_internal("OBSConfigWidget ou OBSController não disponível/inicializado. Não é possível atualizar config.", level)
             return
 
         config = self.obs_config_widget.get_config()
@@ -109,7 +104,7 @@ class MainController(QObject):
     def _update_vmix_controller_settings(self):
         if not self.vmix_config_widget or not self.vmix_controller:
             level = "warning" if self.vmix_config_widget else "error"
-            self._log_internal(f"VMixConfigWidget ou VMixController não disponível/inicializado. Não é possível atualizar config.", level)
+            self._log_internal("VMixConfigWidget ou VMixController não disponível/inicializado. Não é possível atualizar config.", level)
             return
 
         config = self.vmix_config_widget.get_config()
@@ -566,7 +561,7 @@ class MainController(QObject):
             except Exception as e:
                 self._log_internal(f"Erro ao obter lista de itens da cena OBS '{scene_name}': {e}", "error")
                 return []
-        self._log_internal(f"Controlador OBS não disponível ou nome da cena ausente para obter itens da cena.", "warning")
+        self._log_internal("Controlador OBS não disponível ou nome da cena ausente para obter itens da cena.", "warning")
         return []
 
     def get_obs_input_list(self):
@@ -598,19 +593,17 @@ class MainController(QObject):
             except Exception as e:
                 self._log_internal(f"Erro ao obter campos de título do vMix para input '{input_id_or_name}': {e}", "error")
                 return []
-        self._log_internal(f"Controlador vMix não conectado para obter campos de título.", "warning")
+        self._log_internal("Controlador vMix não conectado para obter campos de título.", "warning")
         return []
 
     # --- Persistência de Configurações (Exemplo) ---
     def load_project_settings(self, filepath):
         # Implementação futura
         self._log_internal(f"Funcionalidade 'Carregar Projeto' ainda não implementada ({filepath}).", "info")
-        pass
 
     def save_project_settings(self, filepath):
         # Implementação futura
         self._log_internal(f"Funcionalidade 'Salvar Projeto' ainda não implementada ({filepath}).", "info")
-        pass
 
     def cleanup(self):
         self._log_internal("Realizando cleanup do MainController...", "info")

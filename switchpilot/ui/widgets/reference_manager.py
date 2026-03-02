@@ -196,10 +196,13 @@ class ReferenceManagerWidget(QWidget):
 
         # --- Região PGM ---
         self.pgm_region_label = QLabel("Região PGM: Não definida")
-        self.pgm_region_label.setStyleSheet("font-style: italic; color:  #d8dee9;")
+        self.pgm_region_label.setStyleSheet(
+            "background-color: #2c313a; color: #88c0d0; padding: 4px 8px; border-radius: 2px; border-left: 3px solid #5e81ac;"
+        )
         actions_layout.addWidget(self.pgm_region_label)
 
         self.select_region_button = QPushButton("Selecionar Região PGM")
+        self.select_region_button.setObjectName("primaryButton")
         self.select_region_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         actions_layout.addWidget(self.select_region_button)
 
@@ -231,13 +234,15 @@ class ReferenceManagerWidget(QWidget):
 
         self.reference_list_widget = QListWidget()
         self.reference_list_widget.setAlternatingRowColors(True)
-        self.reference_list_widget.setMinimumHeight(150)  # Manter para garantir algum espaço inicial
+        self.reference_list_widget.setMinimumHeight(150)
+        self.reference_list_widget.setSpacing(2)  # Adicionado espaçamento entre os itens
         self.reference_list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(self.reference_list_widget, 1)  # Adicionado diretamente ao main_layout com stretch
+        main_layout.addWidget(self.reference_list_widget, 1)
 
         list_actions_layout = QHBoxLayout()
         self.configure_actions_button = QPushButton("Configurar Ações da Selecionada")
         self.remove_reference_button = QPushButton("Remover Selecionada")
+        self.remove_reference_button.setObjectName("removeButton")
         self.nsfw_checkbox = QCheckBox("Detecção Adicional NSFW")
         self.nsfw_checkbox.setToolTip("Envia o PGM atual à IA p/ detectar nudez nativamente em tempo real.")
 

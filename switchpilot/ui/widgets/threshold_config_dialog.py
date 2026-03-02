@@ -14,14 +14,23 @@ class ThresholdConfigDialog(QDialog):
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configurar Limiares")
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        try:
-            from switchpilot.ui.main_window import enable_dark_title_bar_for_window
-            enable_dark_title_bar_for_window(self)
-        except Exception:
-            pass
+        self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
         self.setMinimumWidth(420)
-        layout = QVBoxLayout(self)
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
+        self.title_bar = CustomTitleBar(self, None, height=32)
+        self.title_bar.btn_min.hide()
+        self.title_bar.btn_max.hide()
+        main_layout.addWidget(self.title_bar)
+
+        content_container = QFrame(self)
+        layout = QVBoxLayout(content_container)
+        layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.addWidget(content_container)
 
         # === SEÇÃO: Similaridade de Cena ===
         section_font = QFont()
@@ -29,7 +38,7 @@ class ThresholdConfigDialog(QDialog):
         section_font.setPointSize(10)
 
         sim_label = QLabel("Similaridade de Cena")
-        sim_label.setFont(section_font)
+        sim_label.setProperty("heading", True)
         layout.addWidget(sim_label)
 
         # Valores recomendados
@@ -92,7 +101,7 @@ class ThresholdConfigDialog(QDialog):
 
         # === SEÇÃO: Detecção NSFW ===
         nsfw_label = QLabel("Detecção NSFW")
-        nsfw_label.setFont(section_font)
+        nsfw_label.setProperty("heading", True)
         layout.addWidget(nsfw_label)
 
         # Valores recomendados NSFW

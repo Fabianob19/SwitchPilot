@@ -7,7 +7,7 @@ Arquitetura:
   detect_deep_async()→ Fase 2 background (quadrantes via IPC)
 
 Princípios v11 (Worker-based):
-  - Isola o onnxruntime-directml em um processo dedicado para evitar 
+  - Isola o onnxruntime-directml em um processo dedicado para evitar
     conflitos letais (DLL Hell) de MSVC com PyQt5 e numpy do processo principal.
   - Thresholds alinhados ao NudeNet original (YOLO ≥ 0.20, NMS 0.25)
   - Zero falso positivo > recall perfeito
@@ -151,7 +151,7 @@ class NSFWDetector:
                     self.log_callback(f"[NSFWDetector v11] 640m Medium | {hw} | {model_path} [Subprocess Mode]", "success")
                 return True
 
-            except Exception as ex:
+            except Exception:
                 self.enabled = False
                 if self.log_callback:
                     import traceback
@@ -247,9 +247,9 @@ class NSFWDetector:
                     if self.log_callback:
                         self.log_callback(f"[NSFWDetector IPC] Worker infer failed: {err}", "error")
                     return []
-            except Exception as e:
+            except Exception:
                 if self.log_callback:
-                    self.log_callback(f"[NSFWDetector IPC] Communication error: {e}", "error")
+                    self.log_callback("[NSFWDetector IPC] Communication error.", "error")
                 return []
 
     # ================================================================

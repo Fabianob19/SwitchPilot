@@ -1,7 +1,7 @@
 import markdown
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QListWidget, QTextBrowser,
-    QDialogButtonBox, QSplitter
+    QDialogButtonBox, QSplitter, QWidget
 )
 from PyQt5.QtCore import Qt
 from switchpilot.utils.paths import get_resource_path
@@ -12,12 +12,23 @@ class HelpCenterDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Central de Ajuda - SwitchPilot")
         self.resize(1000, 700)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
 
-        # Enable custom title bar integration check if needed, strictly minimal here
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        self.layout = QVBoxLayout(self)
+        from switchpilot.ui.widgets.custom_title_bar import CustomTitleBar
+        self.title_bar = CustomTitleBar(self, None, height=32)
+        # Help Center might be resizable, but let's hide max/min to be safe
+        self.title_bar.btn_min.hide()
+        self.title_bar.btn_max.hide()
+        main_layout.addWidget(self.title_bar)
+
+        content_container = QWidget(self)
+        self.layout = QVBoxLayout(content_container)
         self.layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.addWidget(content_container)
 
         # Splitter Layout: Menu (Left) | Content (Right)
         self.splitter = QSplitter(Qt.Horizontal)
@@ -25,44 +36,14 @@ class HelpCenterDialog(QDialog):
         # 1. Menu Lateral
         self.menu_list = QListWidget()
         self.menu_list.setFixedWidth(220)
-        self.menu_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2e3440;
-                color: #d8dee9;
-                border: 1px solid #3b4252;
-                border-radius: 4px;
-                font-size: 14px;
-                padding: 10px;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-radius: 4px;
-            }
-            QListWidget::item:selected {
-                background-color: #5e81ac;
-                color: #eceff4;
-            }
-            QListWidget::item:hover {
-                background-color: #434c5e;
-            }
-        """)
+        self.menu_list.setObjectName("helpCenterMenu")
         self._populate_menu()
         self.menu_list.currentItemChanged.connect(self._on_topic_changed)
 
         # 2. Área de Conteúdo
         self.content_browser = QTextBrowser()
         self.content_browser.setOpenExternalLinks(True)
-        self.content_browser.setStyleSheet("""
-            QTextBrowser {
-                background-color: #3b4252;
-                color: #eceff4;
-                border: 1px solid #4c566a;
-                border-radius: 4px;
-                padding: 20px;
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 14px;
-            }
-        """)
+        self.content_browser.setObjectName("helpCenterContent")
 
         self.splitter.addWidget(self.menu_list)
         self.splitter.addWidget(self.content_browser)
@@ -85,6 +66,7 @@ class HelpCenterDialog(QDialog):
             "quick_guide": ("🚀 Guia Rápido", "docs/help/quick_guide.md"),
             "shortcuts": ("⌨️ Atalhos de Teclado", "docs/help/shortcuts.md"),
             "faq": ("❓ Perguntas Frequentes", "docs/help/faq.md"),
+            "nsfw": ("🔞 Filtro NSFW (IA)", "docs/help/nsfw_filter.md"),
             "troubleshooting": ("🔧 Solução de Problemas", "docs/help/troubleshooting.md"),
             "requirements": ("💻 Requisitos", "docs/help/requirements.md"),
             "about": ("ℹ️ Sobre", "docs/help/about.md"),
@@ -122,23 +104,52 @@ class HelpCenterDialog(QDialog):
                 md_text = f.read()
 
             # Converter Markdown para HTML
-            html_content = markdown.markdown(md_text)
+            html_content = markdown.markdown(md_text, extensions=['fenced_code', 'tables'])
 
-            # Estilização CSS básica para o HTML renderizado
+            # Determinar se o tema atual é claro
+            is_light = False
+            if self.parent() and hasattr(self.parent(), 'current_theme_name'):
+                is_light = self.parent().current_theme_name == "modern_light.qss"
+
+            if is_light:
+                css = """
+                    body { font-family: 'Segoe UI', sans-serif; color: #1f2937; padding: 10px; }
+                    h1 { color: #1e3a8a; font-size: 24px; margin-bottom: 20px; font-weight: 700; }
+                    h2 { color: #2563eb; font-size: 18px; margin-top: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+                    h3 { color: #16a34a; font-size: 16px; margin-top: 16px; font-weight: 600; }
+                    p { line-height: 1.6; margin-bottom: 12px; font-size: 14px; }
+                    li { margin-bottom: 6px; line-height: 1.5; font-size: 14px; }
+                    code { background-color: #f3f4f6; color: #7f1d1d; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #e5e7eb; }
+                    pre { background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; overflow-x: auto; }
+                    pre code { background-color: transparent; color: #334155; border: none; padding: 0; }
+                    strong { color: #0f172a; font-weight: 700; }
+                    a { color: #2563eb; text-decoration: none; font-weight: 500; }
+                    a:hover { text-decoration: underline; }
+                    blockquote { border-left: 4px solid #3b82f6; padding-left: 14px; color: #4b5563; font-style: italic; background-color: #eff6ff; padding: 12px; border-radius: 0 6px 6px 0; margin: 16px 0; }
+                """
+            else:
+                css = """
+                    body { font-family: 'Segoe UI', sans-serif; color: #e2e8f0; padding: 10px; }
+                    h1 { color: #60a5fa; font-size: 24px; margin-bottom: 20px; font-weight: 700; }
+                    h2 { color: #93c5fd; font-size: 18px; margin-top: 24px; border-bottom: 2px solid #334155; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+                    h3 { color: #a7f3d0; font-size: 16px; margin-top: 16px; font-weight: 600; }
+                    p { line-height: 1.6; margin-bottom: 12px; font-size: 14px; }
+                    li { margin-bottom: 6px; line-height: 1.5; font-size: 14px; }
+                    code { background-color: #1e293b; color: #fca5a5; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #334155; }
+                    pre { background-color: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #1e293b; overflow-x: auto; }
+                    pre code { background-color: transparent; color: #e2e8f0; border: none; padding: 0; }
+                    strong { color: #f8fafc; font-weight: 700; }
+                    a { color: #60a5fa; text-decoration: none; font-weight: 500; }
+                    a:hover { text-decoration: underline; }
+                    blockquote { border-left: 4px solid #3b82f6; padding-left: 14px; color: #cbd5e1; font-style: italic; background-color: #1e293b; padding: 12px; border-radius: 0 6px 6px 0; margin: 16px 0; }
+                """
+
+            # Estilização CSS baseada no tema
             styled_html = f"""
             <html>
             <head>
                 <style>
-                    body {{ font-family: 'Segoe UI', sans-serif; color: #eceff4; }}
-                    h1 {{ color: #88c0d0; font-size: 24px; margin-bottom: 20px; }}
-                    h2 {{ color: #81a1c1; font-size: 20px; margin-top: 20px; border-bottom: 1px solid #4c566a; padding-bottom: 5px; }}
-                    h3 {{ color: #a3be8c; font-size: 18px; margin-top: 15px; }}
-                    p {{ line-height: 1.6; margin-bottom: 10px; }}
-                    li {{ margin-bottom: 5px; }}
-                    code {{ background-color: #2e3440; padding: 2px 5px; border-radius: 3px; font-family: 'Consolas', monospace; color: #d8dee9; }}
-                    strong {{ color: #ebcb8b; }}
-                    a {{ color: #88c0d0; text-decoration: none; }}
-                    blockquote {{ border-left: 4px solid #5e81ac; padding-left: 10px; color: #d8dee9; font-style: italic; background-color: #2e3440; padding: 10px; }}
+                    {css}
                 </style>
             </head>
             <body>
